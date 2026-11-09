@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as image;
 import 'package:path/path.dart' as p;
 
@@ -12,7 +13,7 @@ class ImagePermissionRequired implements Exception {
 }
 
 /// Shared by preview and PDF. Permissions are exact-source and session-only.
-class SafeImageLoader {
+class SafeImageLoader extends ChangeNotifier {
   SafeImageLoader({this.baseDirectory});
   final String? baseDirectory;
   static const maxBytes = 4 * 1024 * 1024;
@@ -26,9 +27,12 @@ class SafeImageLoader {
   bool _disposed = false;
   HttpClient? _client;
 
+  bool isAllowed(String source) => _allowed.contains(source);
+
   void allow(String source) {
-    _allowed.add(source);
+    if (_disposed || !_allowed.add(source)) return;
     _cache.remove(source);
+    notifyListeners();
   }
 
   Future<Uint8List> load(String source) {
@@ -154,10 +158,12 @@ class SafeImageLoader {
     return (info.width, info.height);
   }
 
+  @override
   void dispose() {
     _disposed = true;
     _client?.close(force: true);
     _cache.clear();
     _allowed.clear();
+    super.dispose();
   }
 }

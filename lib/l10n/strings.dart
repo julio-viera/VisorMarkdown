@@ -26,7 +26,8 @@ class Strings {
       "markdownStandard": "Markdown standard",
       "clearSearch": "Clear search",
 
-      "paletteDefaults": "Default colors",
+      "paletteLogo": "Visor Markdown",
+      "paletteDefaults": "Neutral gray",
       "minimizeWindow": "Minimize window",
       "maximizeWindow": "Maximize window",
       "restoreWindow": "Restore window",
@@ -131,7 +132,8 @@ class Strings {
       "markdownStandard": "Estándar Markdown",
       "clearSearch": "Limpiar búsqueda",
 
-      "paletteDefaults": "Colores por defecto",
+      "paletteLogo": "Visor Markdown",
+      "paletteDefaults": "Gris neutro",
       "minimizeWindow": "Minimizar ventana",
       "maximizeWindow": "Maximizar ventana",
       "restoreWindow": "Restaurar ventana",
@@ -236,7 +238,8 @@ class Strings {
       "markdownStandard": "Padrão Markdown",
       "clearSearch": "Limpar pesquisa",
 
-      "paletteDefaults": "Cores padrão",
+      "paletteLogo": "Visor Markdown",
+      "paletteDefaults": "Cinza neutro",
       "minimizeWindow": "Minimizar janela",
       "maximizeWindow": "Maximizar janela",
       "restoreWindow": "Restaurar janela",
@@ -341,7 +344,8 @@ class Strings {
       "markdownStandard": "Markdown-Standard",
       "clearSearch": "Suche löschen",
 
-      "paletteDefaults": "Standardfarben",
+      "paletteLogo": "Visor Markdown",
+      "paletteDefaults": "Neutrales Grau",
       "minimizeWindow": "Fenster minimieren",
       "maximizeWindow": "Fenster maximieren",
       "restoreWindow": "Fenster wiederherstellen",
@@ -448,7 +452,8 @@ class Strings {
       "markdownStandard": "Standard Markdown",
       "clearSearch": "Effacer la recherche",
 
-      "paletteDefaults": "Couleurs par défaut",
+      "paletteLogo": "Visor Markdown",
+      "paletteDefaults": "Gris neutre",
       "minimizeWindow": "Réduire la fenêtre",
       "maximizeWindow": "Agrandir la fenêtre",
       "restoreWindow": "Restaurer la fenêtre",
@@ -554,7 +559,8 @@ class Strings {
       "markdownStandard": "Standard Markdown",
       "clearSearch": "Cancella ricerca",
 
-      "paletteDefaults": "Colori predefiniti",
+      "paletteLogo": "Visor Markdown",
+      "paletteDefaults": "Grigio neutro",
       "minimizeWindow": "Riduci finestra",
       "maximizeWindow": "Ingrandisci finestra",
       "restoreWindow": "Ripristina finestra",

@@ -25,6 +25,26 @@ void main() {
           final theme = appTheme(brightness, settings);
           expect(theme.brightness, brightness);
           final chrome = DocumentChromeColors(theme.colorScheme);
+          if (palette == ThemePalette.logo) {
+            final scheme = theme.colorScheme;
+            expect(
+              contrast(scheme.secondary, scheme.onSecondary),
+              greaterThanOrEqualTo(4.5),
+            );
+            expect(
+              contrast(scheme.secondaryContainer, scheme.onSecondaryContainer),
+              greaterThanOrEqualTo(4.5),
+            );
+            for (final surface in [
+              scheme.surfaceContainer,
+              scheme.surfaceContainerHighest,
+            ]) {
+              expect(
+                contrast(scheme.onSurface, surface),
+                greaterThanOrEqualTo(4.5),
+              );
+            }
+          }
           if (palette == ThemePalette.defaults) {
             for (final color in [
               chrome.strip,
@@ -84,6 +104,7 @@ void main() {
       final settings = tester
           .widget<WorkspaceScreen>(find.byType(WorkspaceScreen))
           .settings;
+      expect(settings.palette, ThemePalette.logo);
       final toolbar = find.byKey(const ValueKey('document-toolbar'));
       final decoration =
           tester.widget<DecoratedBox>(toolbar).decoration as BoxDecoration;

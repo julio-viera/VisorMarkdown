@@ -21,33 +21,59 @@ class SafeMarkdownImage extends StatefulWidget {
 }
 
 class _SafeMarkdownImageState extends State<SafeMarkdownImage> {
-  late Future<Uint8List> pending = widget.loader.load(widget.source);
+  late Future<Uint8List> pending;
+  late bool allowed;
   MemoryImage? provider;
+  @override
+  void initState() {
+    super.initState();
+    _load();
+    widget.loader.addListener(_permissionChanged);
+  }
+
+  void _load() {
+    provider?.evict();
+    provider = null;
+    allowed = widget.loader.isAllowed(widget.source);
+    pending = widget.loader.load(widget.source);
+  }
+
+  void _permissionChanged() {
+    if (!allowed && widget.loader.isAllowed(widget.source)) {
+      setState(_load);
+    }
+  }
+
   @override
   void didUpdateWidget(SafeMarkdownImage oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.loader != widget.loader) {
+      oldWidget.loader.removeListener(_permissionChanged);
+      widget.loader.addListener(_permissionChanged);
+    }
     if (oldWidget.loader != widget.loader ||
         oldWidget.source != widget.source) {
-      provider?.evict();
-      provider = null;
-      pending = widget.loader.load(widget.source);
+      _load();
     }
   }
 
   @override
   void dispose() {
+    widget.loader.removeListener(_permissionChanged);
     provider?.evict();
     super.dispose();
   }
 
   Future<void> authorize() async {
+    final loader = widget.loader;
+    final source = widget.source;
     final allow = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(widget.strings['loadImage']),
         content: SingleChildScrollView(
           child: Text(
-            '${widget.strings['imagePermission']}\n\n${widget.source.length > 1000 ? '${widget.source.substring(0, 1000)}…' : widget.source}',
+            '${widget.strings['imagePermission']}\n\n${source.length > 1000 ? '${source.substring(0, 1000)}…' : source}',
           ),
         ),
         actions: [
@@ -62,15 +88,22 @@ class _SafeMarkdownImageState extends State<SafeMarkdownImage> {
         ],
       ),
     );
-    if (allow != true || !mounted) return;
-    widget.loader.allow(widget.source);
-    setState(() => pending = widget.loader.load(widget.source));
+    if (allow != true ||
+        !mounted ||
+        widget.loader != loader ||
+        widget.source != source) {
+      return;
+    }
+    loader.allow(source);
   }
 
   @override
   Widget build(BuildContext context) => FutureBuilder<Uint8List>(
     future: pending,
     builder: (context, snapshot) {
+      if (snapshot.connectionState != ConnectionState.done) {
+        return Text(widget.alt);
+      }
       if (snapshot.hasData) {
         provider ??= MemoryImage(snapshot.data!);
         return Image(

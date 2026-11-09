@@ -20,6 +20,7 @@ class FontSettings {
 }
 
 enum ThemePalette {
+  logo(Color(0xffb09aff)),
   defaults(Color(0xff616161)),
   ocean(Color(0xff2563eb)),
   forest(Color(0xff39754a)),
@@ -36,7 +37,7 @@ enum ThemePalette {
 
 class AppSettings extends ChangeNotifier {
   ThemeMode theme = ThemeMode.system;
-  ThemePalette palette = ThemePalette.defaults;
+  ThemePalette palette = ThemePalette.logo;
   bool highContrast = false;
   Locale? locale;
   final ui = FontSettings();

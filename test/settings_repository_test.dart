@@ -64,6 +64,8 @@ void main() {
         'editor': {'size': -5, 'family': 'missing', 'bold': 'true'},
         'window': {'width': -10, 'height': 0},
       });
+      expect(settings.palette, ThemePalette.logo);
+      settings.restore({'palette': 'defaults'});
       expect(settings.palette, ThemePalette.defaults);
       settings.restore({'version': 1, 'palette': 'teal'});
       expect(settings.palette, ThemePalette.defaults);

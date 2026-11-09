@@ -11,6 +11,34 @@ ThemeData appTheme(Brightness brightness, AppSettings settings) {
     brightness: brightness,
     contrastLevel: settings.highContrast ? 1 : 0,
   );
+  if (settings.palette == ThemePalette.logo) {
+    final dark = brightness == Brightness.dark;
+    final turquoise = ColorScheme.fromSeed(
+      seedColor: const Color(0xff65dfc8),
+      brightness: brightness,
+      contrastLevel: settings.highContrast ? 1 : 0,
+    );
+    scheme = scheme.copyWith(
+      secondary: turquoise.primary,
+      onSecondary: turquoise.onPrimary,
+      secondaryContainer: turquoise.primaryContainer,
+      onSecondaryContainer: turquoise.onPrimaryContainer,
+      surface: dark ? const Color(0xff181e34) : const Color(0xfffaf9ff),
+      surfaceContainerLowest: dark ? const Color(0xff13182b) : Colors.white,
+      surfaceContainerLow: dark
+          ? const Color(0xff1c233a)
+          : const Color(0xfff4f2fc),
+      surfaceContainer: dark
+          ? const Color(0xff212942)
+          : const Color(0xffeeecf8),
+      surfaceContainerHigh: dark
+          ? const Color(0xff272f4b)
+          : const Color(0xffe9e6f4),
+      surfaceContainerHighest: dark
+          ? const Color(0xff2e3756)
+          : const Color(0xffe3e0ef),
+    );
+  }
   if (settings.palette == ThemePalette.sepia) {
     scheme = scheme.copyWith(
       surface: brightness == Brightness.light
