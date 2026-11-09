@@ -27,6 +27,90 @@ void main() {
     return c;
   }
 
+  testWidgets('split can resize, hide and restore the preview', (tester) async {
+    final c = await setup(tester);
+    final doc = c.active;
+    final editor = find.byKey(ValueKey('numbered-editor-${doc.id}'));
+    final preview = find.byKey(ValueKey('preview-${doc.id}'));
+    final divider = find.byKey(const ValueKey('preview-divider'));
+    final initialWidth = tester.getSize(editor).width;
+
+    await tester.drag(divider, const Offset(140, 0));
+    await tester.pumpAndSettle();
+    final resizedWidth = tester.getSize(editor).width;
+    expect(resizedWidth, greaterThan(initialWidth + 100));
+
+    await tester.tap(find.byTooltip('Hide preview'));
+    await tester.pumpAndSettle();
+    expect(preview, findsNothing);
+    expect(divider, findsNothing);
+    expect(tester.getSize(editor).width, 1200);
+
+    doc.scroll.jumpTo(350);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Show preview'));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(editor).width, closeTo(resizedWidth, 1));
+    expect(preview, findsOneWidget);
+    expect(doc.scrollSync.readPreview!(), greaterThan(0));
+
+    await tester.drag(divider, const Offset(600, 0));
+    await tester.pumpAndSettle();
+    expect(tester.getSize(preview).width, greaterThanOrEqualTo(240));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('tabs keep independent preview visibility and width', (
+    tester,
+  ) async {
+    final c = await setup(tester);
+    final first = c.active;
+    final divider = find.byKey(const ValueKey('preview-divider'));
+    double editorWidth() => tester
+        .getSize(find.byKey(ValueKey('numbered-editor-${c.active.id}')))
+        .width;
+
+    final defaultWidth = editorWidth();
+    await tester.drag(divider, const Offset(140, 0));
+    await tester.pumpAndSettle();
+    final firstWidth = editorWidth();
+    expect(firstWidth, greaterThan(defaultWidth));
+    await tester.tap(find.byTooltip('Hide preview'));
+    await tester.pumpAndSettle();
+
+    c.add(text: text);
+    final second = c.active;
+    await tester.pumpAndSettle();
+    expect(divider, findsOneWidget);
+    expect(editorWidth(), closeTo(defaultWidth, 1));
+    await tester.drag(divider, const Offset(-100, 0));
+    await tester.pumpAndSettle();
+    final secondWidth = editorWidth();
+    expect(secondWidth, lessThan(defaultWidth));
+
+    c.select(0);
+    await tester.pumpAndSettle();
+    expect(divider, findsNothing);
+    await tester.tap(find.byTooltip('Show preview'));
+    await tester.pumpAndSettle();
+    expect(editorWidth(), closeTo(firstWidth, 1));
+
+    c.select(1);
+    await tester.pumpAndSettle();
+    expect(editorWidth(), closeTo(secondWidth, 1));
+    tester.view.physicalSize = const Size(390, 844);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Preview'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(ValueKey('preview-${second.id}')), findsOneWidget);
+    c.select(0);
+    await tester.pumpAndSettle();
+    expect(find.byKey(ValueKey('numbered-editor-${first.id}')), findsOneWidget);
+    c.select(1);
+    await tester.pumpAndSettle();
+    expect(find.byKey(ValueKey('preview-${second.id}')), findsOneWidget);
+  });
+
   testWidgets('distant editor jump aligns the matching preview heading', (
     tester,
   ) async {
@@ -136,6 +220,25 @@ void main() {
     expect(c.active.scrollSync.readEditor!(), closeTo(secondOffset, 4));
     expect(c.active.scrollSync.readPreview!(), closeTo(secondOffset, 4));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('returning to an evicted preview restores the tab scroll', (
+    tester,
+  ) async {
+    final c = await setup(tester);
+    final first = c.active;
+    final anchor = text.indexOf('# Section 40');
+    first.scrollSync.revealEditor!(anchor);
+    await tester.pumpAndSettle();
+
+    c.add(text: List.filled(600, text.substring(0, 100)).join('\n\n'));
+    await tester.pumpAndSettle();
+    expect(first.previewScroll.hasClients, isFalse);
+    await tester.tap(find.byKey(ValueKey('tab-${first.id}')));
+    await tester.pumpAndSettle();
+
+    expect(first.scrollSync.readEditor!(), closeTo(anchor, 4));
+    expect(first.scrollSync.readPreview!(), closeTo(anchor, 4));
   });
 
   testWidgets('switching mobile panels restores the visible source block', (

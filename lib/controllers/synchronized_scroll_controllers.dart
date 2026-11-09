@@ -3,7 +3,12 @@ import 'package:flutter/widgets.dart';
 /// Synchronizes the top of each panel using a character offset in the source.
 class SynchronizedScrollControllers {
   SynchronizedScrollControllers() {
-    editor = ScrollController(onAttach: (_) => _schedule());
+    editor = ScrollController(
+      onAttach: (_) {
+        _restoringEditor = true;
+        _schedule();
+      },
+    );
     preview = ScrollController(onAttach: (_) => _schedule());
     editor.addListener(() => _scrolled(fromPreview: false));
     preview.addListener(() => _scrolled(fromPreview: true));
@@ -18,6 +23,7 @@ class SynchronizedScrollControllers {
 
   int _anchor = 0;
   bool? _fromPreview;
+  bool _restoringEditor = false;
   bool _syncing = false;
   bool _scheduled = false;
   bool _disposed = false;
@@ -41,7 +47,10 @@ class SynchronizedScrollControllers {
     binding.addPostFrameCallback((_) {
       _scheduled = false;
       if (_disposed) return;
-      final fromPreview = _fromPreview;
+      // A preview mounted in the same frame may ask to read the editor
+      // before its viewport has recovered this tab's saved source position.
+      final fromPreview = _restoringEditor ? null : _fromPreview;
+      _restoringEditor = false;
       _fromPreview = null;
       final anchor = switch (fromPreview) {
         true => readPreview?.call(),

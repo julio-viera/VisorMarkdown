@@ -37,6 +37,9 @@ class MarkdownDocument {
        originalName = name;
   final int id;
   final SearchEditorController editor;
+  bool showPreview = true;
+  bool mobilePreview = false;
+  final editorFraction = ValueNotifier(.5);
   final scrollSync = SynchronizedScrollControllers();
   ScrollController get scroll => scrollSync.editor;
   ScrollController get previewScroll => scrollSync.preview;
@@ -71,5 +74,6 @@ class MarkdownDocument {
     _images?.dispose();
     editor.dispose();
     scrollSync.dispose();
+    editorFraction.dispose();
   }
 }

@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../app_info.dart';
 import '../themes/app_theme.dart';
+import '../widgets/document_split_view.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/window_chrome.dart';
 import '../widgets/retained_preview.dart';
@@ -59,7 +60,6 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   final search = TextEditingController();
   final editorFocus = FocusNode();
   final searchFocus = FocusNode();
-  bool mobilePreview = false;
   bool dragging = false;
   bool busy = false;
   Strings get s => Strings(Localizations.localeOf(context).languageCode);
@@ -262,7 +262,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     workspace.nextMatch(direction);
     final doc = workspace.active;
     if (doc.matchIndex < 0) return;
-    if (mobilePreview) setState(() => mobilePreview = false);
+    if (doc.mobilePreview) setState(() => doc.mobilePreview = false);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted ||
           workspace.active != doc ||
@@ -341,8 +341,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       ),
       composing: TextRange.empty,
     );
-    if (mobilePreview) setState(() => mobilePreview = false);
-    editorFocus.requestFocus();
+    if (target.mobilePreview) setState(() => target.mobilePreview = false);
+    if (workspace.active == target) editorFocus.requestFocus();
   });
 
   Future<void> export(String format) async {
@@ -420,7 +420,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         offset: before.length + prefix.length + table.length,
       ),
     );
-    if (mobilePreview) setState(() => mobilePreview = false);
+    if (doc.mobilePreview) setState(() => doc.mobilePreview = false);
     editorFocus.requestFocus();
   }
 
@@ -485,7 +485,18 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     builder: (_) => SettingsDialog(settings: widget.settings),
   );
 
-  List<Widget> toolbarActions() => [
+  List<Widget> toolbarActions(MarkdownDocument doc, bool wide) => [
+    if (wide)
+      KeyedSubtree(
+        key: const ValueKey('toggle-preview-action'),
+        child: tool(
+          s[doc.showPreview ? 'hidePreview' : 'showPreview'],
+          doc.showPreview
+              ? Icons.visibility_off_outlined
+              : Icons.visibility_outlined,
+          () => setState(() => doc.showPreview = !doc.showPreview),
+        ),
+      ),
     KeyedSubtree(
       key: const ValueKey('new-tab-action'),
       child: tool(s['new'], Icons.add, newTab),
@@ -526,7 +537,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     ),
   ];
 
-  Widget toolbarContent(List<Widget> children) => LayoutBuilder(
+  Widget toolbarContent(
+    MarkdownDocument doc,
+    List<Widget> children, {
+    required bool wide,
+  }) => LayoutBuilder(
     builder: (context, constraints) {
       final tools = Wrap(
         crossAxisAlignment: WrapCrossAlignment.center,
@@ -536,7 +551,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       );
       final actions = Row(
         mainAxisSize: MainAxisSize.min,
-        children: toolbarActions(),
+        children: toolbarActions(doc, wide),
       );
       if (constraints.maxWidth < 440) {
         return Column(
@@ -765,7 +780,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                         horizontal: 12,
                         vertical: 6,
                       ),
-                      child: toolbarContent([
+                      child: toolbarContent(doc, [
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -862,12 +877,12 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                                   ),
                                 ),
                               ],
-                              selected: {mobilePreview},
+                              selected: {doc.mobilePreview},
                               onSelectionChanged: (v) =>
-                                  setState(() => mobilePreview = v.first),
+                                  setState(() => doc.mobilePreview = v.first),
                             ),
                           ),
-                      ]),
+                      ], wide: wide),
                     ),
                   ),
                   if (doc.externalText != null || doc.missing)
@@ -911,15 +926,16 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                               : null,
                         ),
                         child: wide
-                            ? Row(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Expanded(child: editor(doc)),
-                                  const VerticalDivider(width: 1),
-                                  Expanded(child: previewPanels(doc)),
-                                ],
+                            ? DocumentSplitView(
+                                editor: editor(doc),
+                                editorFraction: doc.editorFraction,
+                                preview: doc.showPreview
+                                    ? previewPanels(doc)
+                                    : null,
+                                dividerLabel: s['resizePanels'],
+                                onResizeEnd: doc.scrollSync.previewChanged,
                               )
-                            : (mobilePreview
+                            : (doc.mobilePreview
                                   ? previewPanels(doc)
                                   : editor(doc)),
                       ),

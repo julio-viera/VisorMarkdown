@@ -118,12 +118,17 @@ class WorkspaceController extends ChangeNotifier {
   void replaceDocument(MarkdownDocument target, OpenedFile file) {
     final index = documents.indexOf(target);
     if (index < 0 || target.saving) return;
-    final replacement = MarkdownDocument(
-      id: target.id,
-      text: file.text,
-      path: file.path,
-      name: file.name,
-    )..dialect = target.dialect;
+    final replacement =
+        MarkdownDocument(
+            id: target.id,
+            text: file.text,
+            path: file.path,
+            name: file.name,
+          )
+          ..dialect = target.dialect
+          ..showPreview = target.showPreview
+          ..mobilePreview = target.mobilePreview;
+    replacement.editorFraction.value = target.editorFraction.value;
     replacement.editor.addListener(changed);
     documents[index] = replacement;
     activeIndex = index;
