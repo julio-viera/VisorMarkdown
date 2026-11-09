@@ -25,6 +25,18 @@ class WorkspaceController extends ChangeNotifier {
     if (!_disposed) notifyListeners();
   }
 
+  void _observeEditor(MarkdownDocument doc) {
+    var lastText = doc.editor.text;
+    doc.editor.addListener(() {
+      final text = doc.editor.text;
+      if (text == lastText) return;
+      final dirtyChanged =
+          (text != doc.savedText) != (lastText != doc.savedText);
+      lastText = text;
+      if (dirtyChanged) changed();
+    });
+  }
+
   void add({String text = '', String? path, String? name, String? sourceId}) {
     final doc = MarkdownDocument(
       id: _next++,
@@ -33,7 +45,7 @@ class WorkspaceController extends ChangeNotifier {
       name: name,
       sourceId: sourceId,
     );
-    doc.editor.addListener(changed);
+    _observeEditor(doc);
     documents.add(doc);
     activeIndex = documents.length - 1;
     changed();
@@ -129,7 +141,7 @@ class WorkspaceController extends ChangeNotifier {
           ..showPreview = target.showPreview
           ..mobilePreview = target.mobilePreview;
     replacement.editorFraction.value = target.editorFraction.value;
-    replacement.editor.addListener(changed);
+    _observeEditor(replacement);
     documents[index] = replacement;
     activeIndex = index;
     target.dispose();

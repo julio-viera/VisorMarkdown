@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -5,6 +8,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:markdown/markdown.dart' as md;
 
 import '../controllers/synchronized_scroll_controllers.dart';
+import '../models/markdown_document.dart';
 import 'blank_line_preview.dart';
 import 'preview_source.dart';
 
@@ -13,7 +17,7 @@ class AnchoredPreview extends StatefulWidget {
     super.key,
     required this.data,
     required this.editor,
-    required this.extensions,
+    required this.dialect,
     required this.scrollSync,
     required this.styleSheet,
     required this.blankLineHeight,
@@ -23,7 +27,7 @@ class AnchoredPreview extends StatefulWidget {
 
   final String data;
   final TextEditingController editor;
-  final md.ExtensionSet extensions;
+  final MarkdownDialect dialect;
   final SynchronizedScrollControllers scrollSync;
   final MarkdownStyleSheet styleSheet;
   final double blankLineHeight;
@@ -38,7 +42,11 @@ class _AnchoredPreviewState extends State<AnchoredPreview> {
   final _viewport = GlobalKey();
   final _before = GlobalKey();
   final _after = GlobalKey();
-  late List<PreviewBlock> _blocks;
+  List<PreviewBlock> _blocks = const [];
+  String? _parsedData;
+  MarkdownDialect? _parsedDialect;
+  bool _parsing = false;
+  static const _backgroundParseThreshold = 64 * 1024;
   int _center = 0;
   double? _viewportHeight;
 
@@ -53,8 +61,7 @@ class _AnchoredPreviewState extends State<AnchoredPreview> {
   @override
   void didUpdateWidget(AnchoredPreview oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.data != widget.data ||
-        oldWidget.extensions != widget.extensions) {
+    if (oldWidget.data != widget.data || oldWidget.dialect != widget.dialect) {
       _parse();
     } else if (oldWidget.styleSheet != widget.styleSheet ||
         oldWidget.blankLineHeight != widget.blankLineHeight) {
@@ -63,7 +70,57 @@ class _AnchoredPreviewState extends State<AnchoredPreview> {
   }
 
   void _parse() {
-    _blocks = parsePreview(widget.data, widget.extensions);
+    final data = widget.data;
+    final dialect = widget.dialect;
+    if (data.length < _backgroundParseThreshold) {
+      _applyBlocks(data, dialect, parsePreview(data, dialect.extensions));
+    } else if (!_parsing) {
+      unawaited(_parseInBackground(data, dialect));
+    }
+  }
+
+  Future<void> _parseInBackground(String data, MarkdownDialect dialect) async {
+    _parsing = true;
+    try {
+      final blocks = await compute(_parseDocument, (
+        data,
+        dialect,
+      ), debugLabel: 'Markdown preview');
+      if (mounted && widget.data == data && widget.dialect == dialect) {
+        setState(() => _applyBlocks(data, dialect, blocks));
+      }
+    } catch (error, stack) {
+      if (mounted && widget.data == data && widget.dialect == dialect) {
+        FlutterError.reportError(
+          FlutterErrorDetails(
+            exception: error,
+            stack: stack,
+            context: ErrorDescription('while parsing the Markdown preview'),
+          ),
+        );
+      }
+    } finally {
+      _parsing = false;
+      // Keep at most one active job and coalesce edits into the latest source.
+      if (mounted &&
+          (widget.data != data || widget.dialect != dialect) &&
+          !_hasCurrentBlocks) {
+        _parse();
+      }
+    }
+  }
+
+  bool get _hasCurrentBlocks =>
+      _parsedData == widget.data && _parsedDialect == widget.dialect;
+
+  void _applyBlocks(
+    String data,
+    MarkdownDialect dialect,
+    List<PreviewBlock> blocks,
+  ) {
+    _blocks = blocks;
+    _parsedData = data;
+    _parsedDialect = dialect;
     _center = _center.clamp(0, _blocks.isEmpty ? 0 : _blocks.length - 1);
     widget.scrollSync.previewChanged();
   }
@@ -99,7 +156,7 @@ class _AnchoredPreviewState extends State<AnchoredPreview> {
   }
 
   int? _read() {
-    if (widget.editor.text != widget.data) return null;
+    if (!_hasCurrentBlocks || widget.editor.text != widget.data) return null;
     final viewport = _viewport.currentContext?.findRenderObject() as RenderBox?;
     if (viewport == null) return null;
     (int, double, double)? first;
@@ -122,7 +179,11 @@ class _AnchoredPreviewState extends State<AnchoredPreview> {
   }
 
   void _reveal(int offset) {
-    if (_blocks.isEmpty || widget.editor.text != widget.data) return;
+    if (_blocks.isEmpty ||
+        !_hasCurrentBlocks ||
+        widget.editor.text != widget.data) {
+      return;
+    }
     final controller = widget.scrollSync.preview;
     final viewport = _viewport.currentContext?.findRenderObject() as RenderBox?;
     if (!controller.hasClients || viewport == null) return;
@@ -212,6 +273,9 @@ class _AnchoredPreviewState extends State<AnchoredPreview> {
     ),
   );
 }
+
+List<PreviewBlock> _parseDocument((String, MarkdownDialect) request) =>
+    parsePreview(request.$1, request.$2.extensions);
 
 class _RenderedBlock extends StatefulWidget {
   const _RenderedBlock({required this.node, required this.preview});

@@ -7,8 +7,10 @@ class SearchEditorController extends TextEditingController {
   String query = '';
   String? _cachedText, _cachedQuery;
   List<TextRange> _matches = const [];
+  List<TextSpan>? _highlighted;
   List<TextRange> matchesFor(String search) {
     if (_cachedText != text || _cachedQuery != search) {
+      _highlighted = null;
       _cachedText = text;
       _cachedQuery = search;
       _matches = search.isEmpty
@@ -38,9 +40,18 @@ class SearchEditorController extends TextEditingController {
         withComposing: withComposing,
       );
     }
+    final matches = matchesFor(query);
+    if (matches.isEmpty) return TextSpan(style: style, text: text);
+    return TextSpan(
+      style: style,
+      children: _highlighted ??= _highlight(matches),
+    );
+  }
+
+  List<TextSpan> _highlight(List<TextRange> matches) {
     final spans = <TextSpan>[];
     var offset = 0;
-    for (final match in matchesFor(query)) {
+    for (final match in matches) {
       spans.add(TextSpan(text: text.substring(offset, match.start)));
       spans.add(
         TextSpan(
@@ -54,6 +65,6 @@ class SearchEditorController extends TextEditingController {
       offset = match.end;
     }
     spans.add(TextSpan(text: text.substring(offset)));
-    return TextSpan(style: style, children: spans);
+    return spans;
   }
 }

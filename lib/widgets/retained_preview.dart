@@ -21,17 +21,43 @@ class RetainedPreview extends StatefulWidget {
 
 class _RetainedPreviewState extends State<RetainedPreview> {
   final recent = <MarkdownDocument>[];
+  final observed = <MarkdownDocument>{};
+
+  bool get exceedsBudget =>
+      recent.length > 1 &&
+      recent.fold<int>(0, (sum, doc) => sum + doc.editor.text.length) >
+          RetainedPreview.maxCharacters;
+
+  void onEditorChanged() {
+    if (exceedsBudget) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    for (final doc in observed) {
+      doc.editor.removeListener(onEditorChanged);
+    }
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     recent.removeWhere((doc) => !widget.documents.contains(doc));
     recent.remove(widget.active);
     recent.add(widget.active);
-    while (recent.length > 2 ||
-        (recent.length > 1 &&
-            recent.fold<int>(0, (sum, doc) => sum + doc.editor.text.length) >
-                RetainedPreview.maxCharacters)) {
+    while (recent.length > 2 || exceedsBudget) {
       recent.removeAt(0);
     }
+    final retained = recent.toSet();
+    for (final doc in observed.difference(retained)) {
+      doc.editor.removeListener(onEditorChanged);
+    }
+    for (final doc in retained.difference(observed)) {
+      doc.editor.addListener(onEditorChanged);
+    }
+    observed
+      ..clear()
+      ..addAll(retained);
     return Stack(
       fit: StackFit.expand,
       children: [

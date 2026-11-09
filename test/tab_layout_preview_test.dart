@@ -88,6 +88,32 @@ void main() {
     },
   );
 
+  testWidgets('a large document renders after background parsing', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final c = WorkspaceController(watch: false);
+    c.active.editor.text =
+        '# Large preview\n\n${List.filled(950, 'A paragraph for the background parser with **bold text** and a short link.').join('\n\n')}';
+    await tester.pumpWidget(MarkdownApp(controller: c));
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox());
+      c.dispose();
+    });
+    final heading = find.text('Large preview');
+    for (var i = 0; i < 100 && heading.evaluate().isEmpty; i++) {
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
+      await tester.pump();
+    }
+    expect(heading, findsOneWidget);
+    expect(c.active.scrollSync.readPreview!(), 0);
+  });
+
   testWidgets('44 KiB preview mounts nearby blocks and groups rapid edits', (
     tester,
   ) async {

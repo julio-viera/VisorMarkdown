@@ -54,25 +54,47 @@ class BlankLineSpacer extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(height: height);
 }
 
-List<md.BlockSyntax> previewBlockSyntaxes({required bool gfm}) => [
-  const BlankLineSyntax(),
-  ListGapSyntax(
-    gfm
-        ? const md.UnorderedListWithCheckboxSyntax()
-        : const md.UnorderedListSyntax(),
-  ),
-  ListGapSyntax(
-    gfm
-        ? const md.OrderedListWithCheckboxSyntax()
-        : const md.OrderedListSyntax(),
-  ),
-];
+/// Line identities are local to each parser, including nested list parsers.
+class PreviewLineIndex {
+  final _indices = Expando<Map<Object, int>>();
+
+  int indexOf(md.BlockParser parser, Object line) {
+    final indices = _indices[parser] ??= (Map<Object, int>.identity()
+      ..addEntries(
+        parser.lines.indexed.map((pair) => MapEntry(pair.$2, pair.$1)),
+      ));
+    return indices[line]!;
+  }
+}
+
+List<md.BlockSyntax> previewBlockSyntaxes({
+  required bool gfm,
+  PreviewLineIndex? lineIndex,
+}) {
+  final index = lineIndex ?? PreviewLineIndex();
+  return [
+    const BlankLineSyntax(),
+    ListGapSyntax(
+      gfm
+          ? const md.UnorderedListWithCheckboxSyntax()
+          : const md.UnorderedListSyntax(),
+      index,
+    ),
+    ListGapSyntax(
+      gfm
+          ? const md.OrderedListWithCheckboxSyntax()
+          : const md.OrderedListSyntax(),
+      index,
+    ),
+  ];
+}
 
 /// The stock list parser removes empty lines between items and at the end of
 /// a list. Restore only those removed lines, while keeping its numbering,
 /// nesting, task-list handling and reference parsing unchanged.
 class ListGapSyntax extends md.BlockSyntax {
-  const ListGapSyntax(this.delegate);
+  const ListGapSyntax(this.delegate, this.lineIndex);
+  final PreviewLineIndex lineIndex;
   final md.ListSyntax delegate;
   static final _marker = RegExp(
     r'^([ \t]*)(?:[-+*]|[0-9]{1,9}[.)])(?:[ \t]+|$)',
@@ -87,12 +109,12 @@ class ListGapSyntax extends md.BlockSyntax {
 
   @override
   md.Node? parse(md.BlockParser parser) {
-    final start = parser.lines.indexOf(parser.current);
+    final start = lineIndex.indexOf(parser, parser.current);
     final node = delegate.parse(parser);
-    if (node is! md.Element || start < 0) return node;
+    if (node is! md.Element) return node;
     final end = parser.isDone
         ? parser.lines.length
-        : parser.lines.indexOf(parser.current);
+        : lineIndex.indexOf(parser, parser.current);
     final first = _marker.firstMatch(parser.lines[start].content);
     if (first == null) return node;
     final indent = first[1];

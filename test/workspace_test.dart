@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:visor_markdown/controllers/workspace_controller.dart';
 import 'package:visor_markdown/models/markdown_document.dart';
@@ -17,6 +18,27 @@ class MemoryRepository extends DocumentRepository {
 }
 
 void main() {
+  test('only dirty transitions notify the workspace during local edits', () {
+    final c = WorkspaceController(watch: false);
+    addTearDown(c.dispose);
+    final editor = c.active.editor;
+    var notifications = 0;
+    c.addListener(() => notifications++);
+
+    editor.text = 'one';
+    expect(notifications, 1);
+    editor.selection = const TextSelection.collapsed(offset: 1);
+    editor.text = 'two';
+    expect(notifications, 1);
+
+    c.active.savedText = 'two';
+    c.changed();
+    editor.text = 'three';
+    expect(notifications, 3);
+    editor.text = 'two';
+    expect(notifications, 4);
+  });
+
   test(
     'tabs isolate search, support literal Unicode and wrap in either direction',
     () {

@@ -844,14 +844,17 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                           width: wide
                               ? 340
                               : MediaQuery.sizeOf(context).width - 24,
-                          child: DocumentSearchField(
-                            controller: search,
-                            focusNode: searchFocus,
-                            strings: s,
-                            matchCount: doc.matches.length,
-                            matchIndex: doc.matchIndex,
-                            onChanged: workspace.search,
-                            onNavigate: navigateSearch,
+                          child: ListenableBuilder(
+                            listenable: doc.editor,
+                            builder: (context, _) => DocumentSearchField(
+                              controller: search,
+                              focusNode: searchFocus,
+                              strings: s,
+                              matchCount: doc.matches.length,
+                              matchIndex: doc.matchIndex,
+                              onChanged: workspace.search,
+                              onNavigate: navigateSearch,
+                            ),
                           ),
                         ),
                         if (!wide)
@@ -1099,7 +1102,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
       scrollSync: doc.scrollSync,
       data: source,
       editor: doc.editor,
-      extensions: doc.dialect.extensions,
+      dialect: doc.dialect,
       blankLineHeight:
           MediaQuery.textScalerOf(context).scale(widget.settings.preview.size) *
           1.6,

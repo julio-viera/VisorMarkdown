@@ -211,16 +211,25 @@ class LineNumberPainter extends CustomPainter {
   /// Visible logical lines only. Wrapped continuations do not get a new number.
   /// The caret endpoint includes the editor's scroll offset and text padding.
   List<LineNumberPlacement> layoutNumbers(Size size) {
+    final placements = <LineNumberPlacement>[];
+    _layoutNumbers(size, (placement, _) => placements.add(placement));
+    return placements;
+  }
+
+  void _layoutNumbers(
+    Size size,
+    void Function(LineNumberPlacement, TextPainter) visit,
+  ) {
     final state = editable();
     final box = gutter();
     if (state == null ||
         box == null ||
         !box.hasSize ||
         state.widget.controller != controller) {
-      return [];
+      return;
     }
     final render = state.renderEditable;
-    if (!render.attached || !render.hasSize) return [];
+    if (!render.attached || !render.hasSize) return;
     final topPosition = render
         .getPositionForPoint(render.localToGlobal(Offset.zero))
         .offset;
@@ -235,7 +244,6 @@ class LineNumberPainter extends CustomPainter {
       }
     }
     final origin = box.localToGlobal(Offset.zero);
-    final placements = <LineNumberPlacement>[];
     for (var index = math.max(0, low - 1); index < offsets.length; index++) {
       final endpoint = render
           .getEndpointsForSelection(
@@ -260,30 +268,22 @@ class LineNumberPainter extends CustomPainter {
       final baseline =
           top +
           painter.computeDistanceToActualBaseline(TextBaseline.alphabetic);
+      if (top <= size.height && top + height >= 0) {
+        visit(LineNumberPlacement(index + 1, top, baseline, height), painter);
+      }
       painter.dispose();
       if (top > size.height) break;
-      if (top + height >= 0) {
-        placements.add(LineNumberPlacement(index + 1, top, baseline, height));
-      }
     }
-    return placements;
   }
 
   @override
   void paint(Canvas canvas, Size size) {
-    final state = editable();
-    if (state == null) return;
-    for (final placement in layoutNumbers(size)) {
-      final painter = numberPainter(
-        state.renderEditable,
-        '${placement.number}',
-      );
+    _layoutNumbers(size, (placement, painter) {
       painter.paint(
         canvas,
         Offset(size.width - painter.width - 10, placement.top),
       );
-      painter.dispose();
-    }
+    });
   }
 
   @override

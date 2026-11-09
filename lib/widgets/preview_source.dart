@@ -15,9 +15,13 @@ List<PreviewBlock> parsePreview(String source, md.ExtensionSet extensions) {
     ...RegExp(r'\r\n|\r|\n').allMatches(source).map((m) => m.end),
   ];
   final ranges = Expando<SourceRange>();
-  final tracker = _SourceTracker(starts, source.length, ranges);
+  final lineIndex = PreviewLineIndex();
+  final tracker = _SourceTracker(starts, source.length, ranges, lineIndex);
   final custom = [
-    ...previewBlockSyntaxes(gfm: extensions == md.ExtensionSet.gitHubFlavored),
+    ...previewBlockSyntaxes(
+      gfm: extensions == md.ExtensionSet.gitHubFlavored,
+      lineIndex: lineIndex,
+    ),
     ...extensions.blockSyntaxes,
   ];
   final defaults = md.BlockParser(
@@ -55,12 +59,12 @@ List<PreviewBlock> parsePreview(String source, md.ExtensionSet extensions) {
 }
 
 class _SourceTracker extends md.BlockSyntax {
-  _SourceTracker(this.starts, this.length, this.ranges);
+  _SourceTracker(this.starts, this.length, this.ranges, this.lineIndex);
   final List<int> starts;
   final int length;
   final Expando<SourceRange> ranges;
   md.BlockParser? _root;
-  final _lines = Map<Object, int>.identity();
+  final PreviewLineIndex lineIndex;
 
   @override
   RegExp get pattern => _never;
@@ -68,12 +72,7 @@ class _SourceTracker extends md.BlockSyntax {
 
   @override
   bool canParse(md.BlockParser parser) {
-    if (_root == null) {
-      _root = parser;
-      for (var i = 0; i < parser.lines.length; i++) {
-        _lines[parser.lines[i]] = i;
-      }
-    }
+    _root ??= parser;
     return false;
   }
 
@@ -85,10 +84,12 @@ class _SourceTracker extends md.BlockSyntax {
     md.Node? Function(md.BlockParser) parse,
   ) {
     if (!identical(parser, _root)) return parse(parser);
-    final first = _lines[parser.linesToConsume.first]!;
+    final first = lineIndex.indexOf(parser, parser.linesToConsume.first);
     final node = parse(parser);
     if (node != null) {
-      final next = parser.isDone ? starts.length : _lines[parser.current]!;
+      final next = parser.isDone
+          ? starts.length
+          : lineIndex.indexOf(parser, parser.current);
       ranges[node] = (
         start: starts[first],
         end: next < starts.length ? starts[next] : length,
