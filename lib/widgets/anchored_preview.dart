@@ -10,7 +10,6 @@ import 'package:markdown/markdown.dart' as md;
 import '../controllers/synchronized_scroll_controllers.dart';
 import '../models/markdown_document.dart';
 import 'blank_line_preview.dart';
-import 'document_scrollbar.dart';
 import 'preview_source.dart';
 
 class AnchoredPreview extends StatefulWidget {
@@ -241,20 +240,6 @@ class _AnchoredPreviewState extends State<AnchoredPreview> {
     }
   }
 
-  double? _pendingThumbFraction;
-
-  void _seekFromThumb(double fraction) {
-    final scheduled = _pendingThumbFraction != null;
-    _pendingThumbFraction = fraction;
-    if (scheduled) return;
-    WidgetsBinding.instance.scheduleFrameCallback((_) {
-      if (!mounted) return;
-      final target = _pendingThumbFraction!;
-      _pendingThumbFraction = null;
-      _reveal((target * widget.data.length).round());
-    });
-  }
-
   Widget _block(BuildContext context, int index) => Padding(
     padding: EdgeInsets.fromLTRB(
       16,
@@ -266,44 +251,35 @@ class _AnchoredPreviewState extends State<AnchoredPreview> {
   );
 
   @override
-  Widget build(BuildContext context) => DocumentScrollbar.forDesktop(
-    context,
-    DocumentScrollbar(
-      controller: widget.scrollSync.preview,
-      onThumbStart: widget.scrollSync.startThumbDrag,
-      onThumbEnd: () => widget.scrollSync.endThumbDrag(fromPreview: true),
-      readFraction: () =>
-          widget.data.isEmpty ? 0 : (_read() ?? 0) / widget.data.length,
-      seek: _seekFromThumb,
-      child: ClipRect(
-        key: _viewport,
-        child: NotificationListener<ScrollMetricsNotification>(
-          onNotification: (notification) {
-            final height = notification.metrics.viewportDimension;
-            if (notification.depth == 0 && _viewportHeight != height) {
-              _viewportHeight = height;
-              widget.scrollSync.previewChanged();
-            }
-            return false;
-          },
-          child: CustomScrollView(
-            controller: widget.scrollSync.preview,
-            center: _after,
-            slivers: [
-              SliverList.builder(
-                key: _before,
-                itemCount: _center,
-                itemBuilder: (context, index) =>
-                    _block(context, _center - 1 - index),
-              ),
-              SliverList.builder(
-                key: _after,
-                itemCount: _blocks.length - _center,
-                itemBuilder: (context, index) =>
-                    _block(context, _center + index),
-              ),
-            ],
-          ),
+  Widget build(BuildContext context) => ClipRect(
+    key: _viewport,
+    child: NotificationListener<ScrollMetricsNotification>(
+      onNotification: (notification) {
+        final height = notification.metrics.viewportDimension;
+        if (notification.depth == 0 && _viewportHeight != height) {
+          _viewportHeight = height;
+          widget.scrollSync.previewChanged();
+        }
+        return false;
+      },
+      child: ScrollConfiguration(
+        behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+        child: CustomScrollView(
+          controller: widget.scrollSync.preview,
+          center: _after,
+          slivers: [
+            SliverList.builder(
+              key: _before,
+              itemCount: _center,
+              itemBuilder: (context, index) =>
+                  _block(context, _center - 1 - index),
+            ),
+            SliverList.builder(
+              key: _after,
+              itemCount: _blocks.length - _center,
+              itemBuilder: (context, index) => _block(context, _center + index),
+            ),
+          ],
         ),
       ),
     ),

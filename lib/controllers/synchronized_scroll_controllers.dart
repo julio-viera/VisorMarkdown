@@ -31,9 +31,9 @@ class SynchronizedScrollControllers {
 
   void startThumbDrag() => _draggingThumb = true;
 
-  void endThumbDrag({required bool fromPreview}) {
+  void endThumbDrag() {
     _draggingThumb = false;
-    _scrolled(fromPreview: fromPreview);
+    _scrolled(fromPreview: false);
   }
 
   void _scrolled({required bool fromPreview}) {

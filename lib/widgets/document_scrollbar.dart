@@ -1,7 +1,7 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 
-/// Desktop scrollbar with explicit thumb gestures. Preview thumbs seek by
-/// source position so a large drag doesn't lay out all intervening blocks.
+/// Editor scrollbar that lets the preview synchronize when the thumb is released.
 class DocumentScrollbar extends RawScrollbar {
   const DocumentScrollbar({
     super.key,
@@ -9,18 +9,16 @@ class DocumentScrollbar extends RawScrollbar {
     required super.child,
     required this.onThumbStart,
     required this.onThumbEnd,
-    this.readFraction,
-    this.seek,
   }) : super(
          controller: controller,
          thumbVisibility: true,
+         thickness: 14,
+         minThumbLength: 36,
          radius: const Radius.circular(4),
        );
 
   final VoidCallback onThumbStart;
   final VoidCallback onThumbEnd;
-  final double Function()? readFraction;
-  final ValueChanged<double>? seek;
 
   static Widget forDesktop(BuildContext context, DocumentScrollbar scrollbar) {
     final behavior = ScrollConfiguration.of(context);
@@ -28,7 +26,7 @@ class DocumentScrollbar extends RawScrollbar {
       TargetPlatform.linux ||
       TargetPlatform.macOS ||
       TargetPlatform.windows => ScrollConfiguration(
-        behavior: behavior.copyWith(scrollbars: false),
+        behavior: const _DocumentScrollBehavior(),
         child: scrollbar,
       ),
       _ => scrollbar.child,
@@ -40,46 +38,34 @@ class DocumentScrollbar extends RawScrollbar {
       _DocumentScrollbarState();
 }
 
+// EditableText explicitly enables automatic scrollbars for multiline fields
+// when copying the inherited behavior. Override decoration at its source.
+class _DocumentScrollBehavior extends MaterialScrollBehavior {
+  const _DocumentScrollBehavior();
+
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) => child;
+}
+
 class _DocumentScrollbarState extends RawScrollbarState<DocumentScrollbar> {
-  Offset? _start;
-  double _fraction = 0;
-  double _fractionPerPixel = 0;
+  bool _dragging = false;
+  bool _hoveringThumb = false;
 
   @override
   void handleThumbPressStart(Offset localPosition) {
     super.handleThumbPressStart(localPosition);
     if (getScrollbarDirection() != Axis.vertical) return;
-    _start = localPosition;
+    setState(() => _dragging = true);
     widget.onThumbStart();
-    if (widget.readFraction case final read?) {
-      final position = widget.controller!.position;
-      final extent = position.maxScrollExtent - position.minScrollExtent;
-      _fraction = read();
-      _fractionPerPixel = extent > 0
-          ? scrollbarPainter.getTrackToScroll(1) / extent
-          : 0;
-    }
-  }
-
-  @override
-  void handleThumbPressUpdate(Offset localPosition) {
-    final start = _start;
-    final seek = widget.seek;
-    if (start == null || seek == null) {
-      super.handleThumbPressUpdate(localPosition);
-      return;
-    }
-    // Passing the unchanged position keeps the native drag alive without
-    // asking the variable-height sliver to traverse a long pixel distance.
-    super.handleThumbPressUpdate(start);
-    final fraction =
-        _fraction + (localPosition.dy - start.dy) * _fractionPerPixel;
-    if (fraction.isFinite) seek(fraction.clamp(0.0, 1.0));
   }
 
   void _finish() {
-    if (_start == null) return;
-    _start = null;
+    if (!_dragging) return;
+    _dragging = false;
     widget.onThumbEnd();
   }
 
@@ -87,11 +73,46 @@ class _DocumentScrollbarState extends RawScrollbarState<DocumentScrollbar> {
   void handleThumbPressEnd(Offset localPosition, Velocity velocity) {
     super.handleThumbPressEnd(localPosition, velocity);
     _finish();
+    if (mounted) setState(() {});
   }
 
   @override
-  Widget build(BuildContext context) =>
-      Listener(onPointerCancel: (_) => _finish(), child: super.build(context));
+  void handleHover(PointerHoverEvent event) {
+    super.handleHover(event);
+    final hovering = isPointerOverThumb(event.position, event.kind);
+    if (_hoveringThumb != hovering) setState(() => _hoveringThumb = hovering);
+  }
+
+  @override
+  void handleHoverExit(PointerExitEvent event) {
+    super.handleHoverExit(event);
+    if (_hoveringThumb) setState(() => _hoveringThumb = false);
+  }
+
+  @override
+  void updateScrollbarPainter() {
+    super.updateScrollbarPainter();
+    final colors = Theme.of(context).colorScheme;
+    scrollbarPainter.color = _hoveringThumb || _dragging
+        ? colors.onSurfaceVariant
+        : colors.outline;
+  }
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+    cursor: _dragging
+        ? SystemMouseCursors.grabbing
+        : _hoveringThumb
+        ? SystemMouseCursors.grab
+        : MouseCursor.defer,
+    child: Listener(
+      onPointerCancel: (_) {
+        _finish();
+        setState(() => _hoveringThumb = false);
+      },
+      child: super.build(context),
+    ),
+  );
 
   @override
   void dispose() {

@@ -1088,7 +1088,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         key: ObjectKey(doc),
         controller: doc.scroll,
         onThumbStart: doc.scrollSync.startThumbDrag,
-        onThumbEnd: () => doc.scrollSync.endThumbDrag(fromPreview: false),
+        onThumbEnd: doc.scrollSync.endThumbDrag,
         child: NumberedEditor(
           key: ValueKey('numbered-editor-${doc.id}'),
           fieldKey: ValueKey('editor-${doc.id}'),

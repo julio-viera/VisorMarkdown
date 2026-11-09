@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:visor_markdown/controllers/workspace_controller.dart';
 import 'package:visor_markdown/main.dart';
@@ -174,7 +175,7 @@ void main() {
   });
 
   testWidgets(
-    'scrollbar thumb seeks without moving the other panel until release',
+    'only the editor shows a scrollbar and the preview still scrolls',
     (tester) async {
       final c = await setup(tester);
       final doc = c.active;
@@ -185,8 +186,28 @@ void main() {
       final editor = tester.getRect(
         find.byKey(ValueKey('numbered-editor-${doc.id}')),
       );
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is RawScrollbar &&
+              (widget.controller == doc.scroll ||
+                  widget.controller == doc.previewScroll),
+        ),
+        findsOneWidget,
+      );
+      final pointer = TestPointer(21, PointerDeviceKind.mouse);
+      final grabPoint = Offset(editor.right - 10, editor.top + 15);
+      await tester.sendEventToBinding(pointer.hover(grabPoint));
+      await tester.pump();
+      expect(
+        RendererBinding.instance.mouseTracker.debugDeviceActiveCursor(
+          pointer.device,
+        ),
+        SystemMouseCursors.grab,
+      );
+
       final editorThumb = await tester.startGesture(
-        Offset(editor.right - 3, editor.top + 15),
+        grabPoint,
         kind: PointerDeviceKind.mouse,
       );
       await editorThumb.moveBy(const Offset(0, 80));
@@ -202,22 +223,11 @@ void main() {
       await tester.pumpAndSettle();
 
       final preview = tester.getRect(find.byKey(ValueKey('preview-${doc.id}')));
-      final thumb = await tester.startGesture(
-        Offset(preview.right - 3, preview.top + 15),
-        kind: PointerDeviceKind.mouse,
-      );
-      await thumb.moveBy(const Offset(0, 80));
-      await tester.pump();
-      await thumb.moveBy(const Offset(0, 300));
-      await tester.pump();
-
-      expect(
-        doc.scrollSync.readPreview!(),
-        greaterThan(largeSource.length ~/ 3),
-      );
-      expect(doc.scroll.offset, 0);
-      await thumb.up();
+      await tester.sendEventToBinding(pointer.hover(preview.center));
+      await tester.sendEventToBinding(pointer.scroll(const Offset(0, 400)));
       await tester.pumpAndSettle();
+
+      expect(doc.scrollSync.readPreview!(), greaterThan(0));
       expect(doc.scroll.offset, greaterThan(0));
       expect(
         doc.scrollSync.readEditor!(),
