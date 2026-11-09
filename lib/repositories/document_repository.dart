@@ -91,8 +91,52 @@ class DocumentRepository {
     return '${stat.size}:${stat.modified.microsecondsSinceEpoch}:${stat.changed.microsecondsSinceEpoch}';
   }
 
-  Future<void> write(String path, String text) async {
-    await File(path).writeAsString(text, flush: true);
+  Future<void> write(String path, String text) =>
+      _replaceFile(path, (file) => file.writeAsString(text, flush: true));
+
+  Future<void> _replaceFile(
+    String path,
+    Future<File> Function(File) writeTemporary,
+  ) async {
+    var destination = File(path).absolute;
+    final type = await FileSystemEntity.type(
+      destination.path,
+      followLinks: false,
+    );
+    if (type == FileSystemEntityType.link) {
+      destination = File(await destination.resolveSymbolicLinks());
+    }
+    final stat = await destination.stat();
+    if (stat.type != FileSystemEntityType.file &&
+        stat.type != FileSystemEntityType.notFound) {
+      throw FileSystemException('Not a regular file', path);
+    }
+
+    final preserveMode =
+        (Platform.isLinux || Platform.isMacOS) &&
+        stat.type == FileSystemEntityType.file;
+    if (preserveMode && (stat.mode & 0x92) == 0) {
+      throw FileSystemException('File is read-only', path);
+    }
+    final staging = await destination.parent.createTemp('.visor-markdown-');
+    try {
+      final temporary = File(p.join(staging.path, 'document'));
+      await writeTemporary(temporary);
+      if (preserveMode) {
+        final mode = (stat.mode & 0x1ff).toRadixString(8);
+        final result = await Process.run('chmod', [mode, temporary.path]);
+        if (result.exitCode != 0) {
+          throw FileSystemException('Cannot preserve file permissions', path);
+        }
+      }
+      await temporary.rename(destination.path);
+    } finally {
+      try {
+        await staging.delete(recursive: true);
+      } on FileSystemException {
+        // Cleanup must not hide a write error or report a committed save as failed.
+      }
+    }
   }
 
   Future<String?> saveBytesAs(
@@ -121,7 +165,10 @@ class DocumentRepository {
       ],
     );
     if (location == null) return null;
-    await File(location.path).writeAsBytes(bytes, flush: true);
+    await _replaceFile(
+      location.path,
+      (file) => file.writeAsBytes(bytes, flush: true),
+    );
     remember(location.path, saving: true);
     return location.path;
   }

@@ -76,6 +76,21 @@ void main() {
       expect(c.active.dialect, MarkdownDialect.gfm);
     },
   );
+  test('external open preserves an empty tab with unsaved deletions', () async {
+    final repo = MemoryRepository()..files['/one.md'] = '# One';
+    final c = WorkspaceController(repository: repo, watch: false);
+    addTearDown(c.dispose);
+    final original = c.active;
+    original.savedText = 'Previously saved contents';
+
+    await c.openPath('/one.md');
+
+    expect(c.documents, contains(original));
+    expect(original.dirty, isTrue);
+    expect(original.editor.text, isEmpty);
+    expect(c.active.path, '/one.md');
+  });
+
   test(
     'external changes and deletion preserve local text until explicit reload',
     () async {

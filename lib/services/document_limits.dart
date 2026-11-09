@@ -31,7 +31,11 @@ class DocumentLimits {
   }
 
   static Future<Uint8List> readBytes(File file, int limit) async {
-    if (await file.length() > limit) {
+    final stat = await file.stat();
+    if (stat.type != FileSystemEntityType.file) {
+      throw FileSystemException('Not a regular file', file.path);
+    }
+    if (stat.size > limit) {
       throw const FormatException('File too large');
     }
     final bytes = BytesBuilder(copy: false);

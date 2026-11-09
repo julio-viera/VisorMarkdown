@@ -88,6 +88,28 @@ void main() {
   );
 
   testWidgets(
+    'opening an existing file selects its tab without replacing edits',
+    (tester) async {
+      final repo = ActionRepository();
+      final c = await setup(tester, repo);
+      await c.openPath('/next.md');
+      final existing = c.active;
+      existing.editor.text = 'unsaved existing edits';
+      c.add(text: 'unsaved current edits');
+      final other = c.active;
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Open'));
+      await tester.pumpAndSettle();
+
+      expect(c.active, same(existing));
+      expect(c.documents, [existing, other]);
+      expect(existing.editor.text, 'unsaved existing edits');
+      expect(other.editor.text, 'unsaved current edits');
+    },
+  );
+
+  testWidgets(
     'open prompts before replacement and cancellation preserves the document',
     (tester) async {
       final c = await setup(tester, ActionRepository());

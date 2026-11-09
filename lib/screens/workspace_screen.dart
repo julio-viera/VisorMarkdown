@@ -282,12 +282,21 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     setState(() => busy = true);
     try {
       await guard(() async {
-        final files = path == null
+        final canonicalDrop = path == null
+            ? null
+            : await workspace.repository.canonicalPath(path);
+        if (canonicalDrop != null &&
+            await workspace.activateOpenCanonicalPath(canonicalDrop)) {
+          if (mounted) syncSearch();
+          return;
+        }
+        if (!mounted || !workspace.documents.contains(target)) return;
+        final files = canonicalDrop == null
             ? await workspace.repository.pick()
             : [
                 OpenedFile(
-                  p.basename(path),
-                  await workspace.repository.read(path),
+                  p.basename(path!),
+                  await workspace.repository.read(canonicalDrop),
                   path,
                 ),
               ];
@@ -296,10 +305,28 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             !workspace.documents.contains(target)) {
           return;
         }
+        final file = files.first;
+        final canonical =
+            canonicalDrop ??
+            (file.path == null
+                ? null
+                : await workspace.repository.canonicalPath(file.path!));
+        if (canonical != null &&
+            await workspace.activateOpenCanonicalPath(canonical)) {
+          if (mounted) syncSearch();
+          return;
+        }
+        if (!mounted || !workspace.documents.contains(target)) return;
         if (!await mayClose(target, prompt: s['unsavedOpen']) || !mounted) {
           return;
         }
-        workspace.replaceDocument(target, files.first);
+        if (canonical != null &&
+            await workspace.activateOpenCanonicalPath(canonical)) {
+          if (mounted) syncSearch();
+          return;
+        }
+        if (!mounted) return;
+        workspace.replaceDocument(target, file);
         syncSearch();
       });
     } finally {

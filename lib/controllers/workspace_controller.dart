@@ -81,26 +81,42 @@ class WorkspaceController extends ChangeNotifier {
     if (_disposed) return;
     final canonical = await repository.canonicalPath(path);
     if (_disposed) return;
-    for (final doc in List<MarkdownDocument>.of(documents)) {
-      if (doc.path == null) continue;
-      final existing = await repository.canonicalPath(doc.path!);
-      if (_disposed) return;
-      if (repository.samePath(existing, canonical) && documents.contains(doc)) {
-        select(documents.indexOf(doc));
-        return;
-      }
-    }
+    if (await activateOpenCanonicalPath(canonical) || _disposed) return;
     final text = await repository.read(canonical);
-    if (_disposed) return;
-    final blank =
-        documents.length == 1 &&
-            active.path == null &&
-            active.editor.text.isEmpty
-        ? active
-        : null;
+    if (await activateOpenCanonicalPath(canonical) || _disposed) return;
+    final blank = _unusedInitialTab;
     add(text: text, path: canonical);
     if (blank != null) close(blank);
   }
+
+  /// Selects an existing document without replacing its editor or undo state.
+  Future<bool> activateOpenCanonicalPath(String canonical) async {
+    if (_disposed) return false;
+    for (final doc in List<MarkdownDocument>.of(documents)) {
+      final path = doc.path;
+      if (path == null) continue;
+      final existing = await repository.canonicalPath(path);
+      if (_disposed) return false;
+      final index = documents.indexOf(doc);
+      if (index >= 0 &&
+          doc.path == path &&
+          repository.samePath(existing, canonical)) {
+        select(index);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  MarkdownDocument? get _unusedInitialTab =>
+      documents.length == 1 &&
+          active.path == null &&
+          active.originalName == null &&
+          !active.saving &&
+          !active.dirty &&
+          active.editor.text.isEmpty
+      ? active
+      : null;
 
   /// External Android documents are imported into a new tab. Keeping no OS
   /// path ensures Save uses the document picker instead of a private cache.
@@ -114,13 +130,7 @@ class WorkspaceController extends ChangeNotifier {
         return;
       }
     }
-    final blank =
-        documents.length == 1 &&
-            active.path == null &&
-            !active.dirty &&
-            active.editor.text.isEmpty
-        ? active
-        : null;
+    final blank = _unusedInitialTab;
     add(text: file.text, name: file.name, sourceId: file.sourceId);
     if (blank != null) close(blank);
   }
