@@ -1,0 +1,31 @@
+name: visor_markdown
+description: Visualizador y editor Markdown multiplataforma de Julio Viera.
+publish_to: none
+version: 1.0.0-beta.1+1
+environment:
+  sdk: ^3.13.7
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  flutter_markdown_plus: ^1.0.12
+  markdown: ^7.3.0
+  pdf: ^3.13.1
+  image: ^4.12.0
+  file_selector: ^1.1.0
+  file_picker: 10.3.10
+  desktop_drop: 0.8.4
+  path_provider: ^2.1.6
+  window_manager: 0.5.2
+  path: ^1.9.1
+  url_launcher: ^6.3.2
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/app_info.json
+    - assets/fonts/

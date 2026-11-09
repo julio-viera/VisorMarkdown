@@ -1,0 +1,22 @@
+{
+  "name": "Visor Markdown",
+  "version": "1.0.0-beta.1",
+  "buildNumber": 1,
+  "buildDate": "2026-11-05",
+  "author": "Julio Viera",
+  "licenseName": "GPL 3",
+  "licenseSpdx": "GPL-3.0-only",
+  "licenseUrl": "https://www.gnu.org/licenses/gpl-3.0.html",
+  "repository": "https://github.com/julio-viera/VisorMarkdown",
+  "issues": "https://github.com/julio-viera/VisorMarkdown/issues",
+  "applicationId": "io.github.julio_viera.VisorMarkdown",
+  "binary": "visor-markdown",
+  "descriptions": {
+    "es": "Visualizador y editor Markdown con pestañas, búsqueda, comparación y exportación.",
+    "en": "Markdown viewer and editor with tabs, search, comparison and export.",
+    "pt": "Visualizador e editor Markdown com abas, pesquisa, comparação e exportação.",
+    "de": "Markdown-Editor und Vorschau mit Tabs, Suche, Vergleich und Export.",
+    "fr": "Éditeur et lecteur Markdown avec onglets, recherche, comparaison et exportation.",
+    "it": "Visualizzatore ed editor Markdown con schede, ricerca, confronto ed esportazione."
+  }
+}

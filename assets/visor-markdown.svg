@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <title>Visor Markdown — Pliegue</title>
+  <rect x="8" y="8" width="240" height="240" rx="54" fill="#181E34"/>
+  <path d="M48 187V66H78L128 121V166L81 114V187Z" fill="#B09AFF"/>
+  <path d="M128 121L178 66H208V187H175V114L128 166Z" fill="#65DFC8"/>
+</svg>
