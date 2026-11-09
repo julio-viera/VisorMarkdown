@@ -145,6 +145,88 @@ void main() {
     );
   });
 
+  testWidgets('returning to the editor top resets the preview origin', (
+    tester,
+  ) async {
+    final c = await setup(tester);
+    final doc = c.active;
+    final preview = find.byKey(ValueKey('preview-${doc.id}'));
+    final heading = find.text('Section 0');
+    final topPadding =
+        tester.getTopLeft(heading).dy - tester.getTopLeft(preview).dy;
+    doc.scrollSync.revealEditor!(text.indexOf('# Section 60'));
+    await tester.pumpAndSettle();
+    expect(heading, findsNothing);
+
+    // Move back near the beginning before returning all the way to the top.
+    doc.scrollSync.revealEditor!(text.indexOf('# Section 1'));
+    await tester.pumpAndSettle();
+    doc.scroll.jumpTo(doc.scroll.position.minScrollExtent);
+    await tester.pumpAndSettle();
+
+    expect(doc.scrollSync.readPreview!(), 0);
+    expect(doc.previewScroll.offset, 0);
+    expect(doc.previewScroll.position.minScrollExtent, 0);
+    expect(
+      tester.getTopLeft(heading).dy - tester.getTopLeft(preview).dy,
+      closeTo(topPadding, .5),
+    );
+  });
+
+  testWidgets(
+    'scrollbar thumb seeks without moving the other panel until release',
+    (tester) async {
+      final c = await setup(tester);
+      final doc = c.active;
+      final largeSource = List.filled(5, text).join('\n\n');
+      doc.editor.text = largeSource;
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
+      final editor = tester.getRect(
+        find.byKey(ValueKey('numbered-editor-${doc.id}')),
+      );
+      final editorThumb = await tester.startGesture(
+        Offset(editor.right - 3, editor.top + 15),
+        kind: PointerDeviceKind.mouse,
+      );
+      await editorThumb.moveBy(const Offset(0, 80));
+      await tester.pump();
+      await editorThumb.moveBy(const Offset(0, 300));
+      await tester.pump();
+      expect(doc.scroll.offset, greaterThan(0));
+      expect(doc.scrollSync.readPreview!(), 0);
+      await editorThumb.up();
+      await tester.pumpAndSettle();
+      expect(doc.scrollSync.readPreview!(), greaterThan(0));
+      doc.scroll.jumpTo(doc.scroll.position.minScrollExtent);
+      await tester.pumpAndSettle();
+
+      final preview = tester.getRect(find.byKey(ValueKey('preview-${doc.id}')));
+      final thumb = await tester.startGesture(
+        Offset(preview.right - 3, preview.top + 15),
+        kind: PointerDeviceKind.mouse,
+      );
+      await thumb.moveBy(const Offset(0, 80));
+      await tester.pump();
+      await thumb.moveBy(const Offset(0, 300));
+      await tester.pump();
+
+      expect(
+        doc.scrollSync.readPreview!(),
+        greaterThan(largeSource.length ~/ 3),
+      );
+      expect(doc.scroll.offset, 0);
+      await thumb.up();
+      await tester.pumpAndSettle();
+      expect(doc.scroll.offset, greaterThan(0));
+      expect(
+        doc.scrollSync.readEditor!(),
+        closeTo(doc.scrollSync.readPreview!()!, 110),
+      );
+    },
+    variant: const TargetPlatformVariant({TargetPlatform.linux}),
+  );
+
   testWidgets('wheel scrolling never reverses either panel on mixed blocks', (
     tester,
   ) async {

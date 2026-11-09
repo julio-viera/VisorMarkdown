@@ -10,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../app_info.dart';
 import '../themes/app_theme.dart';
+import '../widgets/document_scrollbar.dart';
 import '../widgets/document_split_view.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/window_chrome.dart';
@@ -1051,6 +1052,11 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     doc.scrollSync.readEditor = () {
       final render = editable()?.renderEditable;
       if (render == null || !render.attached || !render.hasSize) return null;
+      final position = doc.scroll.position;
+      if (position.hasContentDimensions &&
+          position.pixels <= position.minScrollExtent) {
+        return 0;
+      }
       return render
           .getPositionForPoint(render.localToGlobal(Offset.zero))
           .offset;
@@ -1068,20 +1074,31 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         TextPosition(offset: offset.clamp(0, doc.editor.text.length)),
       );
       final position = doc.scroll.position;
-      final target = (position.pixels + caret.top).clamp(
-        position.minScrollExtent,
-        position.maxScrollExtent,
-      );
+      final target = offset == 0
+          ? position.minScrollExtent
+          : (position.pixels + caret.top).clamp(
+              position.minScrollExtent,
+              position.maxScrollExtent,
+            );
       if ((target - position.pixels).abs() > 1) doc.scroll.jumpTo(target);
     };
-    return NumberedEditor(
-      key: ValueKey('numbered-editor-${doc.id}'),
-      fieldKey: ValueKey('editor-${doc.id}'),
-      onLimitExceeded: () => message(s['documentLimit']),
-      controller: doc.editor,
-      focusNode: editorFocus,
-      scroll: doc.scroll,
-      style: widget.settings.editor.style.copyWith(height: 1.5),
+    return DocumentScrollbar.forDesktop(
+      context,
+      DocumentScrollbar(
+        key: ObjectKey(doc),
+        controller: doc.scroll,
+        onThumbStart: doc.scrollSync.startThumbDrag,
+        onThumbEnd: () => doc.scrollSync.endThumbDrag(fromPreview: false),
+        child: NumberedEditor(
+          key: ValueKey('numbered-editor-${doc.id}'),
+          fieldKey: ValueKey('editor-${doc.id}'),
+          onLimitExceeded: () => message(s['documentLimit']),
+          controller: doc.editor,
+          focusNode: editorFocus,
+          scroll: doc.scroll,
+          style: widget.settings.editor.style.copyWith(height: 1.5),
+        ),
+      ),
     );
   }
 

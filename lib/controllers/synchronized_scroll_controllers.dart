@@ -27,9 +27,17 @@ class SynchronizedScrollControllers {
   bool _syncing = false;
   bool _scheduled = false;
   bool _disposed = false;
+  bool _draggingThumb = false;
+
+  void startThumbDrag() => _draggingThumb = true;
+
+  void endThumbDrag({required bool fromPreview}) {
+    _draggingThumb = false;
+    _scrolled(fromPreview: fromPreview);
+  }
 
   void _scrolled({required bool fromPreview}) {
-    if (_disposed || _syncing) return;
+    if (_disposed || _syncing || _draggingThumb) return;
     final source = fromPreview ? preview : editor;
     if (source.positions.length != 1 ||
         !source.position.hasContentDimensions ||
@@ -46,7 +54,7 @@ class SynchronizedScrollControllers {
     final binding = WidgetsBinding.instance;
     binding.addPostFrameCallback((_) {
       _scheduled = false;
-      if (_disposed) return;
+      if (_disposed || _draggingThumb) return;
       // A preview mounted in the same frame may ask to read the editor
       // before its viewport has recovered this tab's saved source position.
       final fromPreview = _restoringEditor ? null : _fromPreview;
