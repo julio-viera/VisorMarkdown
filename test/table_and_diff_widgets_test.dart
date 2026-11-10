@@ -17,17 +17,21 @@ class PdfRepository extends DocumentRepository {
   Uint8List? exported;
   String? name;
   String? extension;
+  String destination = '/export.pdf';
+
   @override
-  Future<String?> saveBytesAs(
-    String name,
-    Uint8List bytes,
-    String extension,
-  ) async {
+  Future<String> canonicalPath(String path) async => path;
+  @override
+  Future<String?> pickSavePath(String name, String extension) async {
     this.name = name;
     this.extension = extension;
+    return destination;
+  }
+
+  @override
+  Future<void> writeBytes(String path, Uint8List bytes) async {
     exported = bytes;
     completed.complete();
-    return '/export.pdf';
   }
 }
 
@@ -178,6 +182,24 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+  testWidgets('export blocks the path of the source document', (tester) async {
+    final repo = PdfRepository()..destination = '/source.md';
+    final c = await setup(tester, repository: repo);
+    c.add(path: '/source.md', text: 'saved version');
+    c.active.editor.text = 'local changes';
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const ValueKey('export-action')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Export · Markdown'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('already open'), findsOneWidget);
+    expect(repo.exported, isNull);
+    expect(c.active.savedText, 'saved version');
+    expect(c.active.dirty, true);
+  });
+
   testWidgets(
     'export menu creates actual PDF bytes without saving the source document',
     (tester) async {

@@ -70,12 +70,16 @@ class WorkspaceController extends ChangeNotifier {
     }
   }
 
-  Future<void> _openQueue = Future.value();
-  Future<void> openPath(String path) {
-    final request = _openQueue.then((_) => _openPath(path));
-    _openQueue = request.then<void>((_) {}, onError: (Object _) {});
+  Future<void> _fileQueue = Future.value();
+
+  /// Keeps path ownership checks and changes ordered with file-open requests.
+  Future<T> runFileOperation<T>(Future<T> Function() operation) {
+    final request = _fileQueue.then((_) => operation());
+    _fileQueue = request.then<void>((_) {}, onError: (Object _) {});
     return request;
   }
+
+  Future<void> openPath(String path) => runFileOperation(() => _openPath(path));
 
   Future<void> _openPath(String path) async {
     if (_disposed) return;
@@ -91,21 +95,28 @@ class WorkspaceController extends ChangeNotifier {
 
   /// Selects an existing document without replacing its editor or undo state.
   Future<bool> activateOpenCanonicalPath(String canonical) async {
-    if (_disposed) return false;
+    final doc = await documentAtPath(canonical);
+    if (doc == null || _disposed) return false;
+    final index = documents.indexOf(doc);
+    if (index < 0) return false;
+    select(index);
+    return true;
+  }
+
+  Future<MarkdownDocument?> documentAtPath(String canonical) async {
+    if (_disposed) return null;
     for (final doc in List<MarkdownDocument>.of(documents)) {
       final path = doc.path;
       if (path == null) continue;
       final existing = await repository.canonicalPath(path);
-      if (_disposed) return false;
-      final index = documents.indexOf(doc);
-      if (index >= 0 &&
+      if (_disposed) return null;
+      if (documents.contains(doc) &&
           doc.path == path &&
           repository.samePath(existing, canonical)) {
-        select(index);
-        return true;
+        return doc;
       }
     }
-    return false;
+    return null;
   }
 
   MarkdownDocument? get _unusedInitialTab =>

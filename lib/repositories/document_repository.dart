@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -91,13 +90,24 @@ class DocumentRepository {
     return '${stat.size}:${stat.modified.microsecondsSinceEpoch}:${stat.changed.microsecondsSinceEpoch}';
   }
 
-  Future<void> write(String path, String text) =>
-      _replaceFile(path, (file) => file.writeAsString(text, flush: true));
+  Future<void> write(
+    String path,
+    String text, {
+    Future<void> Function()? beforeReplace,
+  }) => _replaceFile(
+    path,
+    (file) => file.writeAsString(text, flush: true),
+    beforeReplace: beforeReplace,
+  );
+
+  Future<void> writeBytes(String path, Uint8List bytes) =>
+      _replaceFile(path, (file) => file.writeAsBytes(bytes, flush: true));
 
   Future<void> _replaceFile(
     String path,
-    Future<File> Function(File) writeTemporary,
-  ) async {
+    Future<File> Function(File) writeTemporary, {
+    Future<void> Function()? beforeReplace,
+  }) async {
     var destination = File(path).absolute;
     final type = await FileSystemEntity.type(
       destination.path,
@@ -129,6 +139,7 @@ class DocumentRepository {
           throw FileSystemException('Cannot preserve file permissions', path);
         }
       }
+      if (beforeReplace != null) await beforeReplace();
       await temporary.rename(destination.path);
     } finally {
       try {
@@ -139,49 +150,15 @@ class DocumentRepository {
     }
   }
 
-  Future<String?> saveBytesAs(
-    String name,
-    Uint8List bytes,
-    String extension,
-  ) async {
-    if (mobile) {
-      return FilePicker.platform.saveFile(
+  Future<String?> saveMobile(String name, Uint8List bytes, String extension) =>
+      FilePicker.platform.saveFile(
         fileName: name,
         type: FileType.custom,
         allowedExtensions: [extension],
         bytes: bytes,
       );
-    }
-    final location = await selector.getSaveLocation(
-      initialDirectory: directory(
-        settings?.lastSaveDirectory ?? settings?.lastOpenDirectory,
-      ),
-      suggestedName: name,
-      acceptedTypeGroups: [
-        selector.XTypeGroup(
-          label: extension.toUpperCase(),
-          extensions: [extension],
-        ),
-      ],
-    );
-    if (location == null) return null;
-    await _replaceFile(
-      location.path,
-      (file) => file.writeAsBytes(bytes, flush: true),
-    );
-    remember(location.path, saving: true);
-    return location.path;
-  }
 
-  Future<String?> saveAs(String name, String text, String extension) async {
-    if (mobile) {
-      return FilePicker.platform.saveFile(
-        fileName: name,
-        type: FileType.custom,
-        allowedExtensions: [extension],
-        bytes: Uint8List.fromList(utf8.encode(text)),
-      );
-    }
+  Future<String?> pickSavePath(String name, String extension) async {
     final location = await selector.getSaveLocation(
       initialDirectory: directory(
         settings?.lastSaveDirectory ?? settings?.lastOpenDirectory,
@@ -194,9 +171,6 @@ class DocumentRepository {
         ),
       ],
     );
-    if (location == null) return null;
-    await write(location.path, text);
-    remember(location.path, saving: true);
-    return location.path;
+    return location?.path;
   }
 }

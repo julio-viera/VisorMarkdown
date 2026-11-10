@@ -100,6 +100,8 @@ class Strings {
       "ui": "Interface",
       "reload": "Reload",
       "external": "The file changed outside the application.",
+      "destinationOpen":
+          "This file is already open. Choose another destination.",
       "missing": "File unavailable. Save as to recover your document.",
       "overwrite": "Overwrite",
       "saved": "Saved",
@@ -206,6 +208,7 @@ class Strings {
       "ui": "Interfaz",
       "reload": "Recargar",
       "external": "El archivo cambió fuera de la aplicación.",
+      "destinationOpen": "Este archivo ya está abierto. Elige otro destino.",
       "missing": "Archivo no disponible. Usa Guardar como para recuperar el documento.",
       "overwrite": "Sobrescribir",
       "saved": "Guardado",
@@ -312,6 +315,7 @@ class Strings {
       "ui": "Interface",
       "reload": "Recarregar",
       "external": "O arquivo foi alterado fora do aplicativo.",
+      "destinationOpen": "Este arquivo já está aberto. Escolha outro destino.",
       "missing":
           "Arquivo indisponível. Use Salvar como para recuperar o documento.",
       "overwrite": "Sobrescrever",
@@ -418,6 +422,8 @@ class Strings {
       "ui": "Oberfläche",
       "reload": "Neu laden",
       "external": "Die Datei wurde außerhalb der Anwendung geändert.",
+      "destinationOpen":
+          "Diese Datei ist bereits geöffnet. Wähle ein anderes Ziel.",
       "missing":
           "Datei nicht verfügbar. Mit Speichern unter das Dokument retten.",
       "overwrite": "Überschreiben",
@@ -527,6 +533,8 @@ class Strings {
       "ui": "Interface",
       "reload": "Recharger",
       "external": "Le fichier a été modifié hors de l’application.",
+      "destinationOpen":
+          "Ce fichier est déjà ouvert. Choisissez une autre destination.",
       "missing": "Fichier indisponible. Utilisez Enregistrer sous pour récupérer le document.",
       "overwrite": "Écraser",
       "saved": "Enregistré",
@@ -633,6 +641,8 @@ class Strings {
       "ui": "Interfaccia",
       "reload": "Ricarica",
       "external": "Il file è stato modificato fuori dall’applicazione.",
+      "destinationOpen":
+          "Questo file è già aperto. Scegli un’altra destinazione.",
       "missing":
           "File non disponibile. Usa Salva come per recuperare il documento.",
       "overwrite": "Sovrascrivi",

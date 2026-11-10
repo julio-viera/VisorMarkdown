@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' show AppExitResponse;
 
@@ -48,6 +49,8 @@ class WorkspaceScreen extends StatefulWidget {
   @override
   State<WorkspaceScreen> createState() => _WorkspaceScreenState();
 }
+
+class _SaveRevisionChanged implements Exception {}
 
 class _WorkspaceScreenState extends State<WorkspaceScreen> {
   late final WorkspaceController workspace =
@@ -156,39 +159,96 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         ),
       ) ??
       false;
+
+  Future<bool> _writeExisting(
+    String path,
+    String snapshot,
+    String savedText,
+  ) async {
+    final repository = workspace.repository;
+    var changedDuringSave = false;
+    while (mounted) {
+      final canonical = await repository.canonicalPath(path);
+      final stamp = await repository.stamp(path);
+      String? disk;
+      try {
+        disk = await repository.read(path);
+      } on FileSystemException {
+        // A missing or unreadable file also requires confirmation.
+      } on FormatException {
+        // The file on disk is no longer a supported Markdown document.
+      }
+      if (!mounted) return false;
+      if ((changedDuringSave || disk != savedText) &&
+          !await confirm(
+            stamp == null ? s['missing'] : s['external'],
+            s['overwrite'],
+          )) {
+        return false;
+      }
+      if (!mounted) return false;
+
+      try {
+        await repository.write(
+          path,
+          snapshot,
+          beforeReplace: () async {
+            final current = await repository.canonicalPath(path);
+            if (!repository.samePath(current, canonical) ||
+                await repository.stamp(path) != stamp) {
+              throw _SaveRevisionChanged();
+            }
+          },
+        );
+        return true;
+      } on _SaveRevisionChanged {
+        changedDuringSave = true;
+      }
+    }
+    return false;
+  }
+
   Future<bool> save(MarkdownDocument doc, {bool as = false}) async {
     if (doc.saving) return false;
     doc.saving = true;
     workspace.changed();
     try {
-      if (!as && doc.path != null) {
-        String? disk;
-        try {
-          disk = await workspace.repository.read(doc.path!);
-        } on FileSystemException {
-          /* Confirm recovery/overwrite below. */
-        }
-        if (!mounted) return false;
-        if ((disk == null || disk != doc.savedText) &&
-            !await confirm(
-              disk == null ? s['missing'] : s['external'],
-              s['overwrite'],
-            )) {
+      final repository = workspace.repository;
+      final snapshot = doc.editor.text;
+      final name = doc.title.endsWith('.md') ? doc.title : '${doc.title}.md';
+      final needsDestination = as || doc.path == null;
+      if (needsDestination && repository.mobile) {
+        // Mobile pickers return document URIs or copies, not writable OS paths.
+        if (await repository.saveMobile(name, utf8.encode(snapshot), 'md') ==
+            null) {
           return false;
         }
-      }
-      final snapshot = doc.editor.text;
-      if (as || doc.path == null) {
-        final location = await workspace.repository.saveAs(
-          doc.title.endsWith('.md') ? doc.title : '${doc.title}.md',
-          snapshot,
-          'md',
-        );
-        if (location == null) return false;
-        // Mobile pickers return document URIs or copies, not writable OS paths.
-        if (!Platform.isAndroid && !Platform.isIOS) doc.path = location;
       } else {
-        await workspace.repository.write(doc.path!, snapshot);
+        final path = needsDestination
+            ? await repository.pickSavePath(name, 'md')
+            : doc.path;
+        if (path == null) return false;
+        final saved = await workspace.runFileOperation(() async {
+          if (!mounted || !workspace.documents.contains(doc)) return false;
+          final canonical = await repository.canonicalPath(path);
+          final owner = await workspace.documentAtPath(canonical);
+          if (!mounted) return false;
+          if (owner != null && owner != doc) {
+            message(s['destinationOpen']);
+            return false;
+          }
+          if (!needsDestination || owner == doc) {
+            if (!await _writeExisting(path, snapshot, doc.savedText)) {
+              return false;
+            }
+          } else {
+            await repository.write(path, snapshot);
+          }
+          if (needsDestination) repository.remember(path, saving: true);
+          if (owner != doc) doc.path = path;
+          return true;
+        });
+        if (!saved) return false;
       }
       if (!mounted || !workspace.documents.contains(doc)) return false;
       doc.savedText = snapshot;
@@ -320,14 +380,17 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
         if (!await mayClose(target, prompt: s['unsavedOpen']) || !mounted) {
           return;
         }
-        if (canonical != null &&
-            await workspace.activateOpenCanonicalPath(canonical)) {
-          if (mounted) syncSearch();
-          return;
-        }
-        if (!mounted) return;
-        workspace.replaceDocument(target, file);
-        syncSearch();
+        await workspace.runFileOperation(() async {
+          if (!mounted) return;
+          if (canonical != null &&
+              await workspace.activateOpenCanonicalPath(canonical)) {
+            if (mounted) syncSearch();
+            return;
+          }
+          if (!mounted) return;
+          workspace.replaceDocument(target, file);
+          syncSearch();
+        });
       });
     } finally {
       if (mounted) setState(() => busy = false);
@@ -380,29 +443,45 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     try {
       await guard(() async {
         final name = '${p.basenameWithoutExtension(doc.title)}.$format';
-        String? location;
-        if (format == 'pdf') {
-          final bytes = await PdfExportService.render(
+        final bytes = switch (format) {
+          'pdf' => await PdfExportService.render(
             doc.editor.text,
             doc.dialect,
             doc.title,
             baseDirectory: doc.path == null ? null : p.dirname(doc.path!),
             imageLoader: doc.images,
-          );
-          location = await workspace.repository.saveBytesAs(name, bytes, 'pdf');
-        } else {
-          final text = switch (format) {
-            'html' => MarkdownService.html(
-              doc.editor.text,
-              doc.dialect,
-              doc.title,
-            ),
-            'txt' => MarkdownService.plainText(doc.editor.text, doc.dialect),
-            _ => doc.editor.text,
-          };
-          location = await workspace.repository.saveAs(name, text, format);
+          ),
+          'html' => utf8.encode(
+            MarkdownService.html(doc.editor.text, doc.dialect, doc.title),
+          ),
+          'txt' => utf8.encode(
+            MarkdownService.plainText(doc.editor.text, doc.dialect),
+          ),
+          _ => utf8.encode(doc.editor.text),
+        };
+        if (!mounted) return;
+        final repository = workspace.repository;
+        if (repository.mobile) {
+          if (await repository.saveMobile(name, bytes, format) != null) {
+            message(s['saved']);
+          }
+          return;
         }
-        if (location != null && mounted) message(s['saved']);
+        final path = await repository.pickSavePath(name, format);
+        if (path == null) return;
+        await workspace.runFileOperation(() async {
+          if (!mounted) return;
+          final canonical = await repository.canonicalPath(path);
+          final owner = await workspace.documentAtPath(canonical);
+          if (!mounted) return;
+          if (owner != null) {
+            message(s['destinationOpen']);
+            return;
+          }
+          await repository.writeBytes(path, bytes);
+          repository.remember(path, saving: true);
+          message(s['saved']);
+        });
       });
     } finally {
       if (mounted) setState(() => busy = false);

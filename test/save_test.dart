@@ -6,26 +6,37 @@ import 'package:visor_markdown/repositories/document_repository.dart';
 
 class SaveRepository extends DocumentRepository {
   @override
-  Future<String> canonicalPath(String path) async => path;
+  Future<String> canonicalPath(String path) async =>
+      path == '/alias.md' ? '/saved.md' : path;
   String disk = 'original';
+  String? changeBeforeReplace;
   bool fail = false;
   bool cancel = false;
+  String destination = '/saved.md';
   int writes = 0;
   @override
   Future<String> read(String path) async => disk;
   @override
-  Future<void> write(String path, String text) async {
+  Future<String?> stamp(String path) async => disk;
+  @override
+  Future<void> write(
+    String path,
+    String text, {
+    Future<void> Function()? beforeReplace,
+  }) async {
+    if (changeBeforeReplace case final change?) {
+      disk = change;
+      changeBeforeReplace = null;
+    }
+    if (beforeReplace != null) await beforeReplace();
     if (fail) throw Exception('write failed');
     disk = text;
     writes++;
   }
 
   @override
-  Future<String?> saveAs(String name, String text, String extension) async {
-    if (cancel) return null;
-    await write('/saved.md', text);
-    return '/saved.md';
-  }
+  Future<String?> pickSavePath(String name, String extension) async =>
+      cancel ? null : destination;
 }
 
 void main() {
@@ -59,6 +70,48 @@ void main() {
     expect(c.active.path, isNull);
     expect(repo.writes, 0);
   });
+  testWidgets('Save as blocks a destination open in another tab', (
+    tester,
+  ) async {
+    final repo = SaveRepository()..destination = '/alias.md';
+    final c = await setup(tester, repo);
+    c.add();
+    c.active.editor.text = 'another draft';
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.save_outlined));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('already open'), findsOneWidget);
+    expect(repo.writes, 0);
+    expect(c.active.path, isNull);
+    expect(c.active.dirty, true);
+  });
+
+  testWidgets('a second external change requires a fresh confirmation', (
+    tester,
+  ) async {
+    final repo = SaveRepository();
+    final c = await setup(tester, repo);
+    repo.disk = 'first external change';
+    repo.changeBeforeReplace = 'second external change';
+
+    await tester.tap(find.byIcon(Icons.save_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Overwrite'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(repo.disk, 'second external change');
+    expect(repo.writes, 0);
+    expect(c.active.dirty, true);
+    await tester.tap(find.text('Overwrite'));
+    await tester.pumpAndSettle();
+    expect(repo.disk, 'local');
+    expect(repo.writes, 1);
+    expect(c.active.dirty, false);
+  });
+
   testWidgets('failed write keeps dirty state and reports the failure', (
     tester,
   ) async {

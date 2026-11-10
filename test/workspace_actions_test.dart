@@ -26,18 +26,22 @@ class ActionRepository extends DocumentRepository {
   @override
   Future<String> read(String path) async => files[path]!;
   @override
-  Future<void> write(String path, String text) async {
+  Future<String?> stamp(String path) async => files[path];
+  @override
+  Future<void> write(
+    String path,
+    String text, {
+    Future<void> Function()? beforeReplace,
+  }) async {
+    if (beforeReplace != null) await beforeReplace();
     if (failWrite) throw Exception('write failed');
     files[path] = text;
     writes.add(path);
   }
 
   @override
-  Future<String?> saveAs(String name, String text, String extension) async {
-    if (cancelSave) return null;
-    await write('/saved.md', text);
-    return '/saved.md';
-  }
+  Future<String?> pickSavePath(String name, String extension) async =>
+      cancelSave ? null : '/saved.md';
 }
 
 void main() {
