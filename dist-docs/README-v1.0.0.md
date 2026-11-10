@@ -9,7 +9,7 @@ Visor Markdown is a Markdown editor and viewer with tabs, search, comparison, an
 - Open several documents in tabs, edit with line numbers, and move between search matches.
 - Compare two documents side by side, with additions and removals highlighted and controls to jump between changes.
 - Choose GitHub Flavored Markdown, CommonMark, or Markdown Original. Insert sample tables in GitHub mode.
-- Export to PDF, HTML, plain text, or Markdown.
+- Export to Word (.docx), LibreOffice (.odt), PDF, HTML, plain text, or Markdown. Word and LibreOffice exports embed supported images using the same permissions as the preview.
 - Follow the system theme or choose light or dark mode. Customize colors, fonts, and text sizes.
 
 ## Downloads and documentation

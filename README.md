@@ -34,7 +34,7 @@ Review two files side by side, with changes highlighted and controls to jump bet
 
 ### Format and share
 
-Choose GitHub Flavored Markdown, CommonMark, or Markdown Original. Insert a sample table in GitHub mode and export to PDF, HTML, plain text, or Markdown.
+Choose GitHub Flavored Markdown, CommonMark, or Markdown Original. Insert a sample table in GitHub mode and export to Word (.docx), LibreOffice (.odt), PDF, HTML, plain text, or Markdown. Word and LibreOffice exports embed supported images using the same permissions as the preview.
 
 ![Format and share](docs/images/export-options.png)
 

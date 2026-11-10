@@ -1,6 +1,6 @@
 # Visor Markdown releases
 
-Visor Markdown is a Markdown editor and viewer for writing with a live preview, working in tabs, and comparing documents side by side. Search within a document and export it as PDF, HTML, plain text, or Markdown.
+Visor Markdown is a Markdown editor and viewer for writing with a live preview, working in tabs, and comparing documents side by side. Search within a document and export it as Word (.docx), LibreOffice (.odt), PDF, HTML, plain text, or Markdown.
 
 [Back to the app overview](README.md)
 

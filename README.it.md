@@ -34,7 +34,7 @@ Esamina due file affiancati, con le modifiche evidenziate e i comandi per passar
 
 ### Formatta e condividi
 
-Scegli GitHub Flavored Markdown, CommonMark o Markdown Original. Inserisci una tabella di esempio in modalità GitHub ed esporta in PDF, HTML, testo semplice o Markdown.
+Scegli GitHub Flavored Markdown, CommonMark o Markdown Original. Inserisci una tabella di esempio in modalità GitHub ed esporta in Word (.docx), LibreOffice (.odt), PDF, HTML, testo semplice o Markdown. Le esportazioni in Word e LibreOffice incorporano le immagini compatibili con le stesse autorizzazioni dell’anteprima.
 
 ![Formatta e condividi](docs/images/export-options.png)
 

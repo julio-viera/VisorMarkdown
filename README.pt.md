@@ -34,7 +34,7 @@ Revise dois arquivos lado a lado, com as alterações destacadas e controles par
 
 ### Formate e compartilhe
 
-Escolha GitHub Flavored Markdown, CommonMark ou Markdown Original. Insira uma tabela de exemplo no modo GitHub e exporte para PDF, HTML, texto simples ou Markdown.
+Escolha GitHub Flavored Markdown, CommonMark ou Markdown Original. Insira uma tabela de exemplo no modo GitHub e exporte para Word (.docx), LibreOffice (.odt), PDF, HTML, texto simples ou Markdown. As exportações para Word e LibreOffice incorporam as imagens compatíveis com as mesmas permissões da pré-visualização.
 
 ![Formate e compartilhe](docs/images/export-options.png)
 

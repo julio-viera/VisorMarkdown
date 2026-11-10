@@ -34,7 +34,7 @@ Examinez deux fichiers côte à côte. Les modifications sont surlignées et vou
 
 ### Mettez en forme et partagez
 
-Choisissez GitHub Flavored Markdown, CommonMark ou Markdown Original. Insérez un tableau d’exemple en mode GitHub et exportez en PDF, HTML, texte brut ou Markdown.
+Choisissez GitHub Flavored Markdown, CommonMark ou Markdown Original. Insérez un tableau d’exemple en mode GitHub et exportez en Word (.docx), LibreOffice (.odt), PDF, HTML, texte brut ou Markdown. Les exports vers Word et LibreOffice incorporent les images compatibles selon les mêmes autorisations que l’aperçu.
 
 ![Mettez en forme et partagez](docs/images/export-options.png)
 
