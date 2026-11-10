@@ -200,6 +200,17 @@ void main() {
     expect(c.active.dirty, true);
   });
 
+  testWidgets('export menu offers Word and LibreOffice documents', (
+    tester,
+  ) async {
+    await setup(tester);
+    await tester.tap(find.byKey(const ValueKey('export-action')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Export · Word (.docx)'), findsOneWidget);
+    expect(find.text('Export · LibreOffice (.odt)'), findsOneWidget);
+  });
+
   testWidgets(
     'export menu creates actual PDF bytes without saving the source document',
     (tester) async {

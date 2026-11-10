@@ -12,7 +12,7 @@ class ImagePermissionRequired implements Exception {
   final String source;
 }
 
-/// Shared by preview and PDF. Permissions are exact-source and session-only.
+/// Shared by preview and document exports. Permissions are exact-source and session-only.
 class SafeImageLoader extends ChangeNotifier {
   SafeImageLoader({this.baseDirectory});
   final String? baseDirectory;

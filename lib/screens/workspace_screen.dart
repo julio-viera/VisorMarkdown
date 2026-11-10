@@ -31,6 +31,7 @@ import '../services/markdown_service.dart';
 import '../services/external_document_service.dart';
 import '../services/desktop_file_open_service.dart';
 import '../services/pdf_export_service.dart';
+import '../services/office_export_service.dart';
 import '../services/document_limits.dart';
 import 'settings_dialog.dart';
 import 'diff_dialog.dart';
@@ -451,6 +452,12 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
             baseDirectory: doc.path == null ? null : p.dirname(doc.path!),
             imageLoader: doc.images,
           ),
+          'docx' || 'odt' => await OfficeExportService.render(
+            doc.editor.text,
+            doc.dialect,
+            format == 'docx' ? OfficeFormat.docx : OfficeFormat.odt,
+            imageLoader: doc.images,
+          ),
           'html' => utf8.encode(
             MarkdownService.html(doc.editor.text, doc.dialect, doc.title),
           ),
@@ -627,6 +634,8 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           'html': 'html',
           'txt': 'plainText',
           'pdf': 'pdf',
+          'docx': 'docx',
+          'odt': 'odt',
         }.entries)
           PopupMenuItem(
             value: entry.key,
