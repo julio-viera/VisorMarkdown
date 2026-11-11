@@ -34,6 +34,7 @@ import '../services/pdf_export_service.dart';
 import '../services/office_export_service.dart';
 import '../services/document_limits.dart';
 import 'settings_dialog.dart';
+import 'markdown_reference_dialog.dart';
 import 'diff_dialog.dart';
 import 'about_dialog.dart' as app;
 
@@ -599,6 +600,17 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     builder: (_) => SettingsDialog(settings: widget.settings),
   );
 
+  Widget markdownReference(MarkdownDocument doc) => KeyedSubtree(
+    key: const ValueKey('markdown-reference-action'),
+    child: tool(s['markdownReference'], Icons.menu_book_outlined, () {
+      showDialog<void>(
+        context: context,
+        builder: (_) =>
+            MarkdownReferenceDialog(initialDialect: doc.dialect, strings: s),
+      );
+    }, extent: MediaQuery.sizeOf(context).width < 800 ? 48 : 36),
+  );
+
   List<Widget> toolbarActions(MarkdownDocument doc, bool wide) => [
     if (wide)
       KeyedSubtree(
@@ -611,6 +623,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           () => setState(() => doc.showPreview = !doc.showPreview),
         ),
       ),
+    if (wide) markdownReference(doc),
     KeyedSubtree(
       key: const ValueKey('new-tab-action'),
       child: tool(s['new'], Icons.add, newTab),
@@ -976,29 +989,37 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                         if (!wide)
                           SizedBox(
                             width: MediaQuery.sizeOf(context).width - 24,
-                            child: SegmentedButton<bool>(
-                              expandedInsets: EdgeInsets.zero,
-                              segments: [
-                                ButtonSegment(
-                                  value: false,
-                                  label: Text(
-                                    s['editor'],
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: SegmentedButton<bool>(
+                                    expandedInsets: EdgeInsets.zero,
+                                    segments: [
+                                      ButtonSegment(
+                                        value: false,
+                                        label: Text(
+                                          s['editor'],
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      ButtonSegment(
+                                        value: true,
+                                        label: Text(
+                                          s['preview'],
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                    selected: {doc.mobilePreview},
+                                    onSelectionChanged: (v) => setState(
+                                      () => doc.mobilePreview = v.first,
+                                    ),
                                   ),
                                 ),
-                                ButtonSegment(
-                                  value: true,
-                                  label: Text(
-                                    s['preview'],
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
+                                markdownReference(doc),
                               ],
-                              selected: {doc.mobilePreview},
-                              onSelectionChanged: (v) =>
-                                  setState(() => doc.mobilePreview = v.first),
                             ),
                           ),
                       ], wide: wide),
