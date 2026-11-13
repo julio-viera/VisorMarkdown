@@ -17,6 +17,8 @@ void main() {
 
 Español: áéíóú ñ. Português: çãõ. Français: été. Deutsch: Größe. Italiano: città.
 
+Símbolos: ⇒ ✓ ★ ⚠.
+
 Texto **en negrita**, *en cursiva*, ~~tachado~~ y un [enlace](https://example.com).
 
 ## Tabla de seis columnas

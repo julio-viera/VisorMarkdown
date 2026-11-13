@@ -36,6 +36,7 @@ class PdfExportService {
       bold: fonts[1],
       italic: fonts[2],
       boldItalic: fonts[3],
+      fontFallback: [fonts[4]],
     );
     final mono = fonts[4];
     final nodes = md.Document(

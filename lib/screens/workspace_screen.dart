@@ -35,6 +35,7 @@ import '../services/office_export_service.dart';
 import '../services/document_limits.dart';
 import 'settings_dialog.dart';
 import 'markdown_reference_dialog.dart';
+import 'character_map_dialog.dart';
 import 'diff_dialog.dart';
 import 'about_dialog.dart' as app;
 
@@ -406,20 +407,19 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
   Future<void> pasteMarkdown() => guard(() async {
     final target = workspace.active;
     final data = await Clipboard.getData(Clipboard.kTextPlain);
-    if (!mounted ||
-        data?.text == null ||
-        !workspace.documents.contains(target)) {
-      return;
-    }
+    if (data?.text case final text?) insertEditorText(target, text);
+  });
+
+  void insertEditorText(MarkdownDocument target, String text) {
+    if (!mounted || !workspace.documents.contains(target)) return;
     final value = target.editor.value;
     final selection = value.selection.isValid
         ? value.selection
         : TextSelection.collapsed(offset: value.text.length);
-    final pasted = data!.text!;
     final replacement = value.text.replaceRange(
       selection.start,
       selection.end,
-      pasted,
+      text,
     );
     try {
       DocumentLimits.validate(replacement);
@@ -429,14 +429,12 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     }
     target.editor.value = value.copyWith(
       text: replacement,
-      selection: TextSelection.collapsed(
-        offset: selection.start + pasted.length,
-      ),
+      selection: TextSelection.collapsed(offset: selection.start + text.length),
       composing: TextRange.empty,
     );
     if (target.mobilePreview) setState(() => target.mobilePreview = false);
     if (workspace.active == target) editorFocus.requestFocus();
-  });
+  }
 
   Future<void> export(String format) async {
     if (busy) return;
@@ -611,6 +609,19 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
     }, extent: MediaQuery.sizeOf(context).width < 800 ? 48 : 36),
   );
 
+  Widget characterMap(MarkdownDocument doc, {double extent = 36}) =>
+      KeyedSubtree(
+        key: const ValueKey('character-map-action'),
+        child: tool(s['characterMap'], Icons.emoji_symbols, () async {
+          final strings = s;
+          final glyph = await showDialog<String>(
+            context: context,
+            builder: (_) => CharacterMapDialog(strings: strings),
+          );
+          if (glyph != null) insertEditorText(doc, glyph);
+        }, extent: extent),
+      );
+
   List<Widget> toolbarActions(MarkdownDocument doc, bool wide) => [
     if (wide)
       KeyedSubtree(
@@ -623,7 +634,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
           () => setState(() => doc.showPreview = !doc.showPreview),
         ),
       ),
-    if (wide) markdownReference(doc),
+    if (wide) ...[markdownReference(doc), characterMap(doc)],
     KeyedSubtree(
       key: const ValueKey('new-tab-action'),
       child: tool(s['new'], Icons.add, newTab),
@@ -1019,6 +1030,7 @@ class _WorkspaceScreenState extends State<WorkspaceScreen> {
                                   ),
                                 ),
                                 markdownReference(doc),
+                                characterMap(doc, extent: 48),
                               ],
                             ),
                           ),
