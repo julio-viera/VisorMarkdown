@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 kind="${1:-}"
-case "$kind" in deb|rpm|flatpak|snap) ;; *) echo 'Usage: tools/package.sh deb|rpm|flatpak|snap [bundle-directory]' >&2; exit 2;; esac
+case "$kind" in deb|rpm|flatpak|snap|appimage) ;; *) echo 'Usage: tools/package.sh deb|rpm|flatpak|snap|appimage [bundle-directory]' >&2; exit 2;; esac
 case "$(uname -m)" in x86_64) flutterarch=x64;; aarch64) flutterarch=arm64;; *) echo 'Unsupported architecture' >&2; exit 1;; esac
 bundle="${2:-build/linux/$flutterarch/release/bundle}"
 bundle="$(realpath "$bundle")"
@@ -138,6 +138,36 @@ SCRIPT
     flatpak build-bundle --arch="$flatpak_arch" \
         --runtime-repo=https://dl.flathub.org/repo/flathub.flatpakrepo \
         "$stage/repository" "$stage/$artifact" "$appid" stable
+    mv "$stage/$artifact" "$out/$artifact"
+    ;;
+  appimage)
+    appimagetool="${APPIMAGETOOL:-appimagetool}"
+    need "$appimagetool"
+    appimage_arch="$(uname -m)"
+    app="$stage/$binary.AppDir"
+    mkdir -p "$app/usr/lib"
+    cp -a "$stage/root/opt/$binary" "$app/usr/lib/"
+    cp -a "$stage/root/usr/share" "$app/usr/"
+    desktop="$app/usr/share/applications/$appid.desktop"
+    sed -i '/^TryExec=/d' "$desktop"
+    printf 'X-AppImage-Version=%s\nX-AppImage-Arch=%s\n' "$version" "$appimage_arch" >> "$desktop"
+    ln -s "usr/share/applications/$appid.desktop" "$app/$appid.desktop"
+    ln -s "usr/share/icons/hicolor/scalable/apps/$appid.svg" "$app/$appid.svg"
+    cp assets/visor-markdown.png "$app/.DirIcon"
+    cat > "$app/AppRun" <<SCRIPT
+#!/bin/sh
+appdir=\$(dirname -- "\$0")
+exec "\$appdir/usr/lib/$binary/$binary" "\$@"
+SCRIPT
+    chmod 755 "$app/AppRun"
+    artifact="${binary}-${version}-${appimage_arch}.AppImage"
+    appimage_options=(--no-appstream)
+    if [[ -n "${APPIMAGE_RUNTIME:-}" ]]; then
+      appimage_options+=(--runtime-file "$APPIMAGE_RUNTIME")
+    fi
+    ARCH="$appimage_arch" APPIMAGE_EXTRACT_AND_RUN=1 \
+        "$appimagetool" "${appimage_options[@]}" "$app" "$stage/$artifact"
+    chmod +x "$stage/$artifact"
     mv "$stage/$artifact" "$out/$artifact"
     ;;
   snap)

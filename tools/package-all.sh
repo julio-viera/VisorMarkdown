@@ -6,7 +6,7 @@ usage() {
   cat <<'USAGE'
 Usage: tools/package-all.sh [bundle-directory]
 
-Linux: DEB, RPM, Flatpak and Snap from a Linux release bundle.
+Linux: DEB, RPM, Flatpak, Snap and AppImage from a Linux release bundle.
 Windows (Git Bash): EXE installer from a Windows release bundle.
 The bundle path is optional and defaults to the platform's Flutter release output.
 USAGE
@@ -30,7 +30,7 @@ case "$(uname -s)" in
   Linux)
     succeeded=()
     failed=()
-    for format in deb rpm flatpak snap; do
+    for format in deb rpm flatpak snap appimage; do
       printf '\n== %s ==\n' "$format"
       if "$tools/package.sh" "$format" "${bundle[@]}"; then
         succeeded+=("$format")
