@@ -6,17 +6,18 @@ Visor Markdown is a Markdown editor and viewer for writing with a live preview, 
 
 ## Latest release
 
-> **1.0.0-beta.1 · Pre-release**
+> **1.0.0-beta.2 · Pre-release**
 >
-> The first beta includes a synchronized editor and preview, tabbed editing, search, side-by-side comparison, and export. The interface supports English, Spanish, French, Portuguese, German, and Italian.
+> This beta adds an offline Unicode character map, support for more symbols in PDF export, and AppImage packaging for Linux. Application bundles now include expanded third-party license notices.
 >
-> [Download packages on GitHub](https://github.com/julio-viera/VisorMarkdown/releases/tag/v1.0.0-beta.1) · [Corresponding source](#source-and-third-party-notices) · [Read the release notes](dist-docs/README-v1.0.0.md)
+> [Download packages on GitHub](https://github.com/julio-viera/VisorMarkdown/releases/tag/v1.0.0-beta.2) · [Read the release notes](dist-docs/README-v1.0.0-beta.2.md) · [Corresponding source](#source-and-third-party-notices)
 
 ## Release history
 
 | Version | Status | Links |
 | --- | --- | --- |
-| 1.0.0-beta.1 | Pre-release | [Downloads](https://github.com/julio-viera/VisorMarkdown/releases/tag/v1.0.0-beta.1) · [Release notes](dist-docs/README-v1.0.0.md) |
+| 1.0.0-beta.2 | Pre-release | [Downloads](https://github.com/julio-viera/VisorMarkdown/releases/tag/v1.0.0-beta.2) · [Release notes](dist-docs/README-v1.0.0-beta.2.md) |
+| 1.0.0-beta.1 | Pre-release | [Downloads](https://github.com/julio-viera/VisorMarkdown/releases/tag/v1.0.0-beta.1) · [Release notes](dist-docs/README-v1.0.0-beta.1.md) |
 
 ## Source and third-party notices
 
